@@ -10,6 +10,7 @@ const planDate = document.querySelector("#plan-date");
 const radarList = document.querySelector("#radar-list");
 const radarCount = document.querySelector("#radar-count");
 const scheduleLayer = document.querySelector("#schedule-layer");
+const calendarStatus = document.querySelector("#calendar-status");
 const eventDialog = document.querySelector("#event-dialog");
 const eventDialogClose = document.querySelector("#event-dialog-close");
 const eventDialogTitle = document.querySelector("#event-dialog-title");
@@ -152,6 +153,40 @@ function renderSchedule() {
   }));
 }
 
+function upsertScheduleItem(item) {
+  const key = item.id
+    ? `${item.source ?? "local"}|${item.id}`.toLowerCase()
+    : `${item.date ?? "today"}|${item.start}|${item.title}`.toLowerCase();
+  const existingIndex = scheduleItems.findIndex((existing) => {
+    const existingKey = existing.id
+      ? `${existing.source ?? "local"}|${existing.id}`.toLowerCase()
+      : `${existing.date ?? "today"}|${existing.start}|${existing.title}`.toLowerCase();
+    return existingKey === key;
+  });
+  if (existingIndex >= 0) scheduleItems[existingIndex] = item;
+  else scheduleItems.push(item);
+}
+
+async function loadCalendar() {
+  try {
+    const response = await fetch("/api/calendar/today");
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "calendar unavailable");
+    if (!data.connected) {
+      calendarStatus.lastChild.textContent = "calendar not connected";
+      return;
+    }
+    for (const item of data.events ?? []) upsertScheduleItem(item);
+    calendarStatus.classList.add("is-connected");
+    calendarStatus.lastChild.textContent = "calendar connected · read only";
+    renderSchedule();
+  } catch (error) {
+    calendarStatus.lastChild.textContent = /permission/i.test(error.message)
+      ? "calendar reconnect needed"
+      : "calendar unavailable";
+  }
+}
+
 function captureScheduleItem(interpretation) {
   if (!interpretation?.shouldAddToPlan || !interpretation.planItemTitle || !interpretation.planItemStart || !interpretation.planItemEnd) return;
   const item = {
@@ -161,12 +196,7 @@ function captureScheduleItem(interpretation) {
     end: interpretation.planItemEnd,
     details: interpretation.planItemDetails
   };
-  const key = `${item.date ?? "today"}|${item.start}|${item.title}`.toLowerCase();
-  const existingIndex = scheduleItems.findIndex((existing) =>
-    `${existing.date ?? "today"}|${existing.start}|${existing.title}`.toLowerCase() === key
-  );
-  if (existingIndex >= 0) scheduleItems[existingIndex] = item;
-  else scheduleItems.push(item);
+  upsertScheduleItem(item);
   renderSchedule();
 }
 
@@ -276,3 +306,4 @@ input.addEventListener("keydown", (event) => {
   }
 });
 input.focus();
+loadCalendar();

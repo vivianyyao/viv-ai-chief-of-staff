@@ -6,6 +6,7 @@ import { hasUsableAnthropicKey, interpretWithClaude, NeedsMoreDetailError } from
 import { DateTime } from "luxon";
 import { interpretSmsLocally, interpretSmsWithClaude } from "./sms-interpreter.js";
 import { processSmsMessage, type SmsInterpreter } from "./sms-service.js";
+import { getCalendarEvents } from "./calendar.js";
 
 export type LocalPlanItem = {
   title: string;
@@ -33,6 +34,37 @@ export function normalizeLocalPlan(input: unknown): LocalPlanItem[] {
 export const demoApp = express();
 demoApp.use(express.json());
 demoApp.use(express.static(join(process.cwd(), "public")));
+demoApp.get("/api/calendar/today", async (_req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN?.trim();
+  const usable = [clientId, clientSecret, refreshToken].every((value) => value && !value.startsWith("your_"));
+  if (!usable) return res.json({ connected: false, events: [] });
+  const timeZone = process.env.TIME_ZONE ?? "America/Los_Angeles";
+  const now = DateTime.now().setZone(timeZone);
+  try {
+    const events = await getCalendarEvents({
+      clientId: clientId!,
+      clientSecret: clientSecret!,
+      refreshToken: refreshToken!,
+      calendarId: process.env.GOOGLE_CALENDAR_ID?.trim() || "primary",
+      timeZone,
+      timeMin: now.startOf("day").toISO()!,
+      timeMax: now.plus({ days: 1 }).startOf("day").toISO()!
+    });
+    return res.json({ connected: true, readOnly: true, date: now.toISODate(), timeZone, events });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "calendar read failed";
+    console.error("Viv calendar read failed", message);
+    const needsReconnect = /scope|permission|insufficient|unauthorized|invalid_grant/i.test(message);
+    return res.status(needsReconnect ? 403 : 502).json({
+      connected: false,
+      needsReconnect,
+      events: [],
+      error: needsReconnect ? "calendar permission needs to be refreshed." : "calendar is unavailable right now."
+    });
+  }
+});
 demoApp.post("/api/chat", async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   if (!message) return res.status(400).json({ error: "tell me what’s on your mind." });

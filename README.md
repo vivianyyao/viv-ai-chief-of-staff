@@ -2,11 +2,11 @@
 
 ## What it does
 
-Viv is an AI chief of staff designed for text messages. The current MVP accepts a message, asks Claude to identify the task or request, duration, deadline, and whether clarification is needed, then replies in Viv's concise voice.
+Viv is an AI chief of staff designed for text messages. The current MVP accepts a message, asks Claude to identify the task or request, duration, deadline, and whether clarification is needed, then replies in Viv's concise voice. Its local plan can display today's read-only Google Calendar events and use them when recommending a time.
 
 ## What it does not do yet
 
-- It does not read or change a calendar.
+- It cannot create, move, or delete calendar events.
 - It does not remember earlier messages or handle confirmations yet.
 - It does not support multiple people.
 - It does not store tasks or message history.
