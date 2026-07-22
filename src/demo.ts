@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 import { findTimeBlock } from "./scheduler.js";
-import type { BusyPeriod, StructuredTask } from "./types.js";
+import type { BusyPeriod, InterpretedTask, StructuredTask } from "./types.js";
 
 export type DemoResult = {
   task: StructuredTask;
@@ -25,25 +25,20 @@ function explainPlan(
   timeZone: string
 ): string {
   if (!proposed) {
-    return `I noticed this task needs ${task.durationMinutes} uninterrupted minutes, but the open time around your existing commitments was too fragmented. I held off on forcing it into a rushed window so we can find a block where you can give it proper attention.`;
+    return `i noticed this needs ${task.durationMinutes} uninterrupted minutes, but the open time around your commitments is too fragmented. i’d hold off rather than force it into a rushed window.`;
   }
 
   const format = (iso: string) => DateTime.fromISO(iso).setZone(timeZone).toFormat("h:mm a");
-  const first = busy[0];
-  const after = busy.filter((event) => DateTime.fromISO(event.start) >= DateTime.fromISO(proposed.end));
-  const noticed = first
-    ? `I noticed your day already has ${busy.map((event) => `${event.title.toLowerCase()} from ${format(event.start)} to ${format(event.end)}`).join(", ")}.`
-    : "I noticed you have a clear day with plenty of room to focus.";
-  const constraint = `“${task.title}” needs about ${task.durationMinutes} uninterrupted minutes, so I looked for a window where you can finish it without context switching.`;
-  const choice = `The first strong focus block is ${format(proposed.start)}–${format(proposed.end)}.`;
-  const rejected = "The earlier openings are either already spoken for or too fragmented to be useful, and pushing it later would make the afternoon feel unnecessarily compressed.";
-  const flexibility = after.length
-    ? "Putting it here protects those commitments and still gives you breathing room before what comes next."
-    : "Putting it here protects the rest of your afternoon and leaves some flexibility afterward.";
-  return `${noticed}\n\n${constraint} ${choice}\n\n${rejected} ${flexibility}`;
+  const noticed = busy.length
+    ? `i noticed your day is broken up by ${busy.map((event) => event.title.toLowerCase()).join(", ")}.`
+    : "i noticed you have a clear day with room to focus.";
+  const focus = `this needs about ${task.durationMinutes} uninterrupted minutes, and ${format(proposed.start)} is the first clean focus block.`;
+  const tradeoff = "the earlier openings are occupied or too fragmented to be useful.";
+  const outcome = "placing it here avoids context switching and still leaves flexibility afterward.";
+  return `${noticed} ${focus} ${tradeoff} ${outcome}`;
 }
 
-function demoTask(message: string, now: DateTime): StructuredTask {
+export function interpretLocally(message: string, now: DateTime): InterpretedTask {
   const durationMatch = message.match(/(\d+)\s*(?:minutes?|mins?)/i);
   const hourMatch = message.match(/(\d+(?:\.\d+)?)\s*hours?/i);
   const durationMinutes = durationMatch
@@ -57,13 +52,13 @@ function demoTask(message: string, now: DateTime): StructuredTask {
   return {
     title: title.charAt(0).toUpperCase() + title.slice(1),
     durationMinutes,
-    earliestStart: null,
     deadline: /friday/i.test(message) ? friday.toISO() : null,
-    notes: null
+    priority: /urgent|important|tomorrow|today/i.test(message) ? "high" : "medium",
+    intent: "schedule_task"
   };
 }
 
-export function createDemoPlan(message: string, suppliedNow?: DateTime): DemoResult {
+export function createPlanFromTask(interpreted: InterpretedTask, suppliedNow?: DateTime): DemoResult {
   const timeZone = "America/Los_Angeles";
   const now = (suppliedNow ?? DateTime.now()).setZone(timeZone);
   const firstWorkday = now.weekday > 5 ? now.plus({ days: 8 - now.weekday }) : now;
@@ -73,7 +68,13 @@ export function createDemoPlan(message: string, suppliedNow?: DateTime): DemoRes
     { title: "Project meeting", start: day.set({ hour: 11 }).toISO()!, end: day.set({ hour: 12 }).toISO()! },
     { title: "Lunch", start: day.set({ hour: 12, minute: 30 }).toISO()!, end: day.set({ hour: 13, minute: 30 }).toISO()! }
   ];
-  const task = demoTask(message, now);
+  const task: StructuredTask = {
+    title: interpreted.title,
+    durationMinutes: interpreted.durationMinutes ?? 30,
+    earliestStart: null,
+    deadline: interpreted.deadline,
+    notes: null
+  };
   const proposed = findTimeBlock(task, busy, {
     timeZone, workdayStart: "09:00", workdayEnd: "17:00", searchDays: 14, now
   });
@@ -81,7 +82,11 @@ export function createDemoPlan(message: string, suppliedNow?: DateTime): DemoRes
   const recommendation = proposed ? (() => {
     const start = DateTime.fromISO(proposed.start).setZone(timeZone);
     const end = DateTime.fromISO(proposed.end).setZone(timeZone);
-    const dateLabel = start.hasSame(now, "day") ? "Today" : start.hasSame(now.plus({ days: 1 }), "day") ? "Tomorrow" : start.toFormat("cccc, LLL d");
+    const dateLabel = start.hasSame(now, "day")
+      ? `today, ${start.toFormat("LLLL d").toLowerCase()}`
+      : start.hasSame(now.plus({ days: 1 }), "day")
+        ? `tomorrow, ${start.toFormat("LLLL d").toLowerCase()}`
+        : start.toFormat("cccc, LLLL d").toLowerCase();
     return {
       title: task.title,
       dateLabel,
@@ -92,4 +97,9 @@ export function createDemoPlan(message: string, suppliedNow?: DateTime): DemoRes
     };
   })() : null;
   return { task, busy, proposed, reasoning, recommendation, timeZone };
+}
+
+export function createDemoPlan(message: string, suppliedNow?: DateTime): DemoResult {
+  const now = (suppliedNow ?? DateTime.now()).setZone("America/Los_Angeles");
+  return createPlanFromTask(interpretLocally(message, now), now);
 }

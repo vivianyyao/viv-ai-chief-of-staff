@@ -10,9 +10,9 @@ describe("Viv local experience", () => {
     expect(result.task.title).toBe("Finish the budget deck");
     expect(result.proposed?.start).toContain("2026-07-22T09:30:00");
     expect(result.reasoning).toContain("90 uninterrupted minutes");
-    expect(result.reasoning).toContain("9:30 AM–11:00 AM");
+    expect(result.reasoning).toContain("9:30 AM");
     expect(result.reasoning).toContain("earlier openings");
-    expect(result.reasoning).toContain("breathing room");
+    expect(result.reasoning).toContain("flexibility afterward");
     expect(result.recommendation?.confidence).toBe("High");
     expect(result.recommendation?.reasons).toContain("no conflicts");
   });

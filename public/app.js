@@ -8,11 +8,11 @@ const errorBox = document.querySelector("#error");
 const toast = document.querySelector("#toast");
 
 const thinkingSteps = [
-  "Understanding your request...",
-  "Checking today's schedule...",
-  "Looking for uninterrupted focus...",
-  "Evaluating tradeoffs...",
-  "Building a recommendation..."
+  "understanding your request...",
+  "checking today's schedule...",
+  "looking for uninterrupted focus...",
+  "evaluating tradeoffs...",
+  "building a recommendation..."
 ];
 
 const wait = (milliseconds) => new Promise(resolve => setTimeout(resolve, milliseconds));
@@ -35,20 +35,25 @@ function showToast(message) {
 }
 
 function renderResult(data) {
-  document.querySelector("#reasoning-title").textContent = `Making room for “${data.task.title}”`;
-  document.querySelector("#reasoning").replaceChildren(...data.reasoning.split("\n\n").map(text => {
-    const paragraph = document.createElement("p");
-    paragraph.textContent = text;
-    return paragraph;
-  }));
+  document.querySelector("#reasoning-title").textContent = `making room for “${data.task.title}”`;
+  const conciseReasoning = data.reasoning
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(/(?<=[.!?])\s+/)
+    .slice(0, 4)
+    .join(" ")
+    .toLowerCase();
+  const reasoningParagraph = document.createElement("p");
+  reasoningParagraph.textContent = conciseReasoning;
+  document.querySelector("#reasoning").replaceChildren(reasoningParagraph);
 
   if (!data.recommendation) throw new Error("Viv couldn't find a strong recommendation yet.");
   const recommendation = data.recommendation;
   document.querySelector("#recommendation-title").textContent = recommendation.title;
-  document.querySelector("#recommendation-day").textContent = recommendation.dateLabel;
+  document.querySelector("#recommendation-day").textContent = recommendation.dateLabel.toLowerCase();
   document.querySelector("#recommendation-start").textContent = recommendation.startLabel;
   document.querySelector("#recommendation-end").textContent = recommendation.endLabel;
-  document.querySelector("#confidence").textContent = recommendation.confidence;
+  document.querySelector("#confidence").textContent = recommendation.confidence.toLowerCase();
   document.querySelector("#recommendation-reasons").replaceChildren(...recommendation.reasons.map(reason => {
     const item = document.createElement("li");
     item.textContent = reason;
@@ -62,7 +67,7 @@ form.addEventListener("submit", async (event) => {
   results.hidden = true;
   thinking.hidden = false;
   submitButton.disabled = true;
-  submitButton.querySelector("span").textContent = "Thinking";
+    submitButton.querySelector("span").textContent = "thinking";
 
   try {
     const responsePromise = fetch("/api/demo", {
@@ -83,13 +88,13 @@ form.addEventListener("submit", async (event) => {
     errorBox.hidden = false;
   } finally {
     submitButton.disabled = false;
-    submitButton.querySelector("span").textContent = "Find a time";
+    submitButton.querySelector("span").textContent = "ask viv";
   }
 });
 
 document.querySelector("#accept-button").addEventListener("click", () => {
-  showToast("Noted. This is a preview, so nothing was changed.");
+  showToast("noted. this is a preview, so nothing was changed.");
 });
 document.querySelector("#another-button").addEventListener("click", () => {
-  showToast("Another-time options are coming next. Nothing was changed.");
+  showToast("another-time options are coming next. nothing was changed.");
 });
