@@ -15,20 +15,19 @@ Never paste a key, secret, token, or password into GitHub, a screenshot, an emai
 
 ## What the app currently does
 
-When the real app is connected, the path is:
+The current path is:
 
 1. You text a task to your Twilio number.
 2. Twilio passes the text to this app.
-3. Claude interprets the title, length, and any timing clues.
-4. Google Calendar reports which times are busy.
-5. The app chooses the first suitable open weekday time.
-6. Twilio returns a text containing that suggestion.
+3. Claude identifies the task or request, duration, deadline, and whether Viv needs to ask a question.
+4. Viv writes a short, natural reply.
+5. Twilio returns the reply when a paid, registered sender is connected.
 
-The app reads availability only. It never creates a calendar event.
+The local conversation page runs the same Claude interpretation without sending a real text.
 
 ## What it does not do
 
-It does not book events, send reminders, store task history, handle several users, manage several calendars, or carry on a confirmation conversation. The local experience uses sample reasoning and a sample schedule. It does not contact Claude, Google, or Twilio.
+It does not read or change calendars, send reminders, store task history, support several users, or carry on a confirmation conversation. It does not remember earlier messages yet.
 
 ## Accounts you will eventually need
 
@@ -38,7 +37,6 @@ You do **not** need any of these for the local Viv experience.
 |---|---|---|---|
 | Anthropic Console | https://console.anthropic.com | Claude interprets each text | API usage requires prepaid credits |
 | Twilio | https://www.twilio.com/try-twilio | Provides the phone number and texts | Phone number and messaging can cost money |
-| Google account / Google Cloud | https://console.cloud.google.com | Gives read-only access to your Google Calendar | Usually no charge for this small MVP |
 | GitHub | https://github.com/signup | Holds the app so Render can access it | Free account is sufficient |
 | Render | https://dashboard.render.com/register | Keeps the app online for Twilio | Plans and free-tier availability can change |
 
@@ -74,11 +72,11 @@ Copy and run:
 npm run demo
 ```
 
-What should happen: Terminal shows `Viv is ready`. Open Safari and paste `http://127.0.0.1:3000` into the address bar. The page is titled **Viv · Your AI Chief of Staff**.
+What should happen: Terminal shows `Viv is ready`. Open Safari and paste `http://127.0.0.1:3000` into the address bar. The page opens a private conversation with **viv · your ai chief of staff**.
 
-On the page, leave the sample task in place and click **Find a time**.
+Type a message such as `finish afterquery application tomorrow, probably 90 minutes`, then press **Return** or click the arrow.
 
-How to confirm: click **Find a time** and watch Viv think through the request. You should see **How Viv Thought** and a recommendation with confidence, reasons, and preview-only action buttons. No outside service was contacted.
+How to confirm: your message appears on the right, Viv briefly shows that it is thinking, and a concise reply appears on the left. Nothing is stored or changed.
 
 To stop Viv, return to Terminal, hold **Control**, and press **C** once.
 

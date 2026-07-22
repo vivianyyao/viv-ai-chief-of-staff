@@ -1,100 +1,79 @@
-const form = document.querySelector("#task-form");
+const form = document.querySelector("#chat-form");
 const input = document.querySelector("#message");
-const submitButton = document.querySelector("#submit-button");
-const results = document.querySelector("#results");
-const thinking = document.querySelector("#thinking");
-const thinkingMessage = document.querySelector("#thinking-message");
+const sendButton = document.querySelector("#send-button");
+const conversation = document.querySelector("#conversation");
 const errorBox = document.querySelector("#error");
-const toast = document.querySelector("#toast");
 
-const thinkingSteps = [
-  "understanding your request...",
-  "checking today's schedule...",
-  "looking for uninterrupted focus...",
-  "evaluating tradeoffs...",
-  "building a recommendation..."
-];
+function scrollToLatest() {
+  requestAnimationFrame(() => conversation.lastElementChild?.scrollIntoView({ behavior: "smooth", block: "end" }));
+}
 
-const wait = (milliseconds) => new Promise(resolve => setTimeout(resolve, milliseconds));
-
-async function playThinkingSequence() {
-  for (const message of thinkingSteps) {
-    thinkingMessage.textContent = message;
-    thinkingMessage.style.animation = "none";
-    thinkingMessage.offsetHeight;
-    thinkingMessage.style.animation = "";
-    await wait(620);
+function addMessage(text, sender) {
+  const row = document.createElement("article");
+  row.className = `message-row ${sender}-row`;
+  const bubble = document.createElement("div");
+  bubble.className = `message ${sender}-message`;
+  for (const block of text.split(/\n\n+/)) {
+    const paragraph = document.createElement("p");
+    paragraph.textContent = block;
+    bubble.append(paragraph);
   }
+  row.append(bubble);
+  conversation.append(row);
+  scrollToLatest();
+  return row;
 }
 
-function showToast(message) {
-  toast.textContent = message;
-  toast.hidden = false;
-  clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => { toast.hidden = true; }, 2600);
+function addThinking() {
+  const row = document.createElement("article");
+  row.className = "message-row viv-row thinking-row";
+  row.innerHTML = '<div class="message viv-message typing"><span></span><span></span><span></span><small>viv is thinking</small></div>';
+  conversation.append(row);
+  scrollToLatest();
+  return row;
 }
 
-function renderResult(data) {
-  document.querySelector("#reasoning-title").textContent = `making room for “${data.task.title}”`;
-  const conciseReasoning = data.reasoning
-    .replace(/\s+/g, " ")
-    .trim()
-    .split(/(?<=[.!?])\s+/)
-    .slice(0, 4)
-    .join(" ")
-    .toLowerCase();
-  const reasoningParagraph = document.createElement("p");
-  reasoningParagraph.textContent = conciseReasoning;
-  document.querySelector("#reasoning").replaceChildren(reasoningParagraph);
-
-  if (!data.recommendation) throw new Error("Viv couldn't find a strong recommendation yet.");
-  const recommendation = data.recommendation;
-  document.querySelector("#recommendation-title").textContent = recommendation.title;
-  document.querySelector("#recommendation-day").textContent = recommendation.dateLabel.toLowerCase();
-  document.querySelector("#recommendation-start").textContent = recommendation.startLabel;
-  document.querySelector("#recommendation-end").textContent = recommendation.endLabel;
-  document.querySelector("#confidence").textContent = recommendation.confidence.toLowerCase();
-  document.querySelector("#recommendation-reasons").replaceChildren(...recommendation.reasons.map(reason => {
-    const item = document.createElement("li");
-    item.textContent = reason;
-    return item;
-  }));
+function resizeInput() {
+  input.style.height = "auto";
+  input.style.height = `${Math.min(input.scrollHeight, 132)}px`;
 }
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  const message = input.value.trim();
+  if (!message || sendButton.disabled) return;
   errorBox.hidden = true;
-  results.hidden = true;
-  thinking.hidden = false;
-  submitButton.disabled = true;
-    submitButton.querySelector("span").textContent = "thinking";
+  addMessage(message, "user");
+  input.value = "";
+  resizeInput();
+  sendButton.disabled = true;
+  const thinking = addThinking();
 
   try {
-    const responsePromise = fetch("/api/demo", {
+    const response = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: input.value })
+      body: JSON.stringify({ message })
     });
-    const [, response] = await Promise.all([playThinkingSequence(), responsePromise]);
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Viv couldn't think through that request.");
-    renderResult(data);
-    thinking.hidden = true;
-    results.hidden = false;
-    results.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!response.ok) throw new Error(data.error || "i couldn’t make sense of that just now.");
+    thinking.remove();
+    addMessage(data.reply, "viv");
   } catch (error) {
-    thinking.hidden = true;
+    thinking.remove();
     errorBox.textContent = error.message;
     errorBox.hidden = false;
   } finally {
-    submitButton.disabled = false;
-    submitButton.querySelector("span").textContent = "ask viv";
+    sendButton.disabled = false;
+    input.focus();
   }
 });
 
-document.querySelector("#accept-button").addEventListener("click", () => {
-  showToast("noted. this is a preview, so nothing was changed.");
+input.addEventListener("input", resizeInput);
+input.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    form.requestSubmit();
+  }
 });
-document.querySelector("#another-button").addEventListener("click", () => {
-  showToast("another-time options are coming next. nothing was changed.");
-});
+input.focus();

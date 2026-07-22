@@ -4,10 +4,28 @@ import { join } from "node:path";
 import { createPlanFromTask, interpretLocally } from "./demo.js";
 import { hasUsableAnthropicKey, interpretWithClaude, NeedsMoreDetailError } from "./interpreter.js";
 import { DateTime } from "luxon";
+import { interpretSmsLocally, interpretSmsWithClaude } from "./sms-interpreter.js";
+import { processSmsMessage, type SmsInterpreter } from "./sms-service.js";
 
 export const demoApp = express();
 demoApp.use(express.json());
 demoApp.use(express.static(join(process.cwd(), "public")));
+demoApp.post("/api/chat", async (req, res) => {
+  const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
+  if (!message) return res.status(400).json({ error: "tell me what’s on your mind." });
+  try {
+    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+    const usesClaude = Boolean(apiKey && !apiKey.startsWith("your_"));
+    const interpret: SmsInterpreter = usesClaude
+      ? (text) => interpretSmsWithClaude(text, { apiKey: apiKey!, model: process.env.ANTHROPIC_MODEL })
+      : async (text) => interpretSmsLocally(text);
+    const result = await processSmsMessage(message, interpret);
+    return res.json({ ...result, interpreter: usesClaude ? "claude" : "local" });
+  } catch (error) {
+    console.error("Viv chat failed", error instanceof Error ? error.message : error);
+    return res.status(502).json({ error: "i’m having trouble reading that right now. try me again in a moment." });
+  }
+});
 demoApp.post("/api/demo", async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   if (!message) return res.status(400).json({ error: "Please type a task first." });

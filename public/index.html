@@ -3,71 +3,42 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f7f7f8">
+  <meta name="theme-color" content="#f5f1e9">
   <title>viv · your ai chief of staff</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="site-header">
-    <a class="brand" href="/" aria-label="Viv home">
-      <span class="brand-mark">V</span>
-      <span><strong>viv</strong><small>your ai chief of staff</small></span>
-    </a>
-    <span class="status"><i></i> ready</span>
-  </header>
-
-  <main>
-    <section class="hero">
-      <p class="kicker">a clearer way forward</p>
-      <h1>text what's on your mind.<br><span>we'll handle the rest.</span></h1>
-      <p class="intro">share the loose end, decision, or task taking up space. viv will make sense of it and recommend the next move.</p>
-    </section>
-
-    <form id="task-form">
-      <label for="message">what's on your mind?</label>
-      <div class="composer">
-        <input id="message" value="Finish the budget deck, about 90 minutes" autocomplete="off" spellcheck="true">
-        <button id="submit-button" type="submit"><span>ask viv</span><b aria-hidden="true">→</b></button>
+  <main class="shell">
+    <header class="chat-header">
+      <div class="identity">
+        <div class="avatar" aria-hidden="true">v</div>
+        <div><h1>viv</h1><p>your ai chief of staff</p></div>
       </div>
+      <div class="presence"><i></i><span>local</span></div>
+    </header>
+
+    <section id="conversation" class="conversation" aria-live="polite" aria-label="Conversation with Viv">
+      <div class="day-divider"><span>today</span></div>
+      <article class="message-row viv-row intro-message">
+        <div class="message viv-message">
+          <p>hi. what’s taking up space?</p>
+          <p>send me a task, a loose end, or just how you’re feeling.</p>
+        </div>
+      </article>
+    </section>
+
+    <p id="error" class="error" role="alert" hidden></p>
+
+    <form id="chat-form" class="composer-wrap">
+      <label class="sr-only" for="message">message viv</label>
+      <div class="composer">
+        <textarea id="message" rows="1" placeholder="text what’s on your mind…" autocomplete="off" spellcheck="true"></textarea>
+        <button id="send-button" type="submit" aria-label="send message">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4"/></svg>
+        </button>
+      </div>
+      <p class="local-note">private local preview · nothing will be changed</p>
     </form>
-
-    <p id="error" role="alert" hidden></p>
-
-    <section id="thinking" class="thinking card" aria-live="polite" hidden>
-      <div class="thinking-orb"><span></span><span></span><span></span></div>
-      <div><span class="eyebrow">viv is thinking...</span><p id="thinking-message">understanding your request...</p></div>
-    </section>
-
-    <section id="results" hidden>
-      <article class="card reasoning-card reveal">
-        <span class="eyebrow">why</span>
-        <h2 id="reasoning-title"></h2>
-        <div id="reasoning"></div>
-      </article>
-
-      <article class="card recommendation-card reveal">
-        <div class="recommendation-header">
-          <span class="eyebrow recommended-label"><i></i> here's what i'd do</span>
-          <div class="confidence"><span>confidence</span><strong id="confidence">high</strong></div>
-        </div>
-        <h2 id="recommendation-title"></h2>
-        <div class="time-block">
-          <span id="recommendation-day"></span>
-          <strong><span id="recommendation-start"></span> <i>–</i> <span id="recommendation-end"></span></strong>
-        </div>
-        <div class="why">
-          <h3>why this works</h3>
-          <ul id="recommendation-reasons"></ul>
-        </div>
-        <div class="actions">
-          <button id="accept-button" class="primary-action" type="button">accept</button>
-          <button id="another-button" class="secondary-action" type="button">choose another time</button>
-        </div>
-        <p class="preview-note">preview only. nothing will be changed.</p>
-      </article>
-    </section>
-
-    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </main>
   <script src="/app.js"></script>
 </body>
