@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { interpretSmsLocally, validateSmsInterpretation } from "../src/sms-interpreter.js";
+import { applyRadarMemory, interpretSmsLocally, validateSmsInterpretation } from "../src/sms-interpreter.js";
 import { isAllowedPhone, processSmsMessage, writeVivReply } from "../src/sms-service.js";
 
 describe("Viv SMS interpretation", () => {
@@ -8,6 +8,37 @@ describe("Viv SMS interpretation", () => {
       kind: "task", taskOrRequest: "finish afterquery application", durationMinutes: 90,
       deadline: "tomorrow", needsClarification: false, clarificationQuestion: null
     }).durationMinutes).toBe(90);
+  });
+
+  it("validates structured proposal times", () => {
+    expect(validateSmsInterpretation({
+      kind: "request", taskOrRequest: "prep for brex interview", durationMinutes: 60,
+      deadline: "tomorrow at 10:30am", needsClarification: false, clarificationQuestion: null,
+      proposedTime: "today 3:15pm–4:15pm", proposedDate: "today", proposedStart: "15:15", proposedEnd: "16:15"
+    }).proposedStart).toBe("15:15");
+  });
+
+  it("attaches a duration-only reply to the one radar task waiting for it", () => {
+    expect(applyRadarMemory({
+      kind: "context", taskOrRequest: null, durationMinutes: 60, deadline: null,
+      needsClarification: false, clarificationQuestion: null
+    }, [{
+      taskOrRequest: "prep for brex interview", durationMinutes: null,
+      deadline: "today", needsClarification: true
+    }])).toMatchObject({
+      kind: "task", taskOrRequest: "prep for brex interview", durationMinutes: 60,
+      deadline: "today", needsClarification: false
+    });
+  });
+
+  it("restores a known duration when a radar task is mentioned again", () => {
+    expect(applyRadarMemory({
+      kind: "request", taskOrRequest: "prep for brex interview", durationMinutes: null,
+      deadline: "today", needsClarification: true, clarificationQuestion: "how long should i set aside?"
+    }, [{
+      taskOrRequest: "prep for brex interview", durationMinutes: 60,
+      deadline: "tomorrow at 10:30am", needsClarification: false
+    }])).toMatchObject({ durationMinutes: 60, needsClarification: false, clarificationQuestion: null });
   });
 
   it("rejects clarification without a question", () => {

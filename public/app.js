@@ -63,7 +63,7 @@ function renderPlanner() {
 
     const status = document.createElement("span");
     status.className = `radar-status${item.needsClarification ? " needs-detail" : ""}`;
-    status.textContent = item.needsClarification ? "needs a detail" : "unscheduled";
+    status.textContent = item.needsClarification ? "needs a detail" : item.proposedTime ? "time proposed" : "unscheduled";
 
     const title = document.createElement("h4");
     title.textContent = item.taskOrRequest;
@@ -138,7 +138,7 @@ function renderSchedule() {
     const end = start !== null && rawEnd !== null && rawEnd <= start ? rawEnd + 24 * 60 : rawEnd;
     const block = document.createElement("button");
     block.type = "button";
-    block.className = "schedule-block";
+    block.className = `schedule-block${item.source === "proposal" ? " is-proposed" : ""}`;
     if (start !== null && end !== null) {
       block.style.top = `${Math.max(0, (start - 6 * 60) / 60 * 48)}px`;
       block.style.height = `${Math.max(30, (end - start) / 60 * 48)}px`;
@@ -200,6 +200,21 @@ function captureScheduleItem(interpretation) {
   renderSchedule();
 }
 
+function captureProposal(interpretation) {
+  if (!interpretation?.taskOrRequest || !interpretation.proposedStart || !interpretation.proposedEnd) return;
+  const normalizedTitle = interpretation.taskOrRequest.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  upsertScheduleItem({
+    id: normalizedTitle,
+    source: "proposal",
+    title: interpretation.taskOrRequest,
+    date: interpretation.proposedDate ?? "today",
+    start: interpretation.proposedStart,
+    end: interpretation.proposedEnd,
+    details: "viv’s proposed time. not confirmed."
+  });
+  renderSchedule();
+}
+
 function captureForPlanner(interpretation) {
   if (!interpretation || !["task", "request"].includes(interpretation.kind) || !interpretation.taskOrRequest) return;
   if (interpretation.kind === "request" && interpretation.durationMinutes === null && !interpretation.needsClarification) return;
@@ -207,7 +222,8 @@ function captureForPlanner(interpretation) {
     taskOrRequest: interpretation.taskOrRequest,
     durationMinutes: interpretation.durationMinutes,
     deadline: interpretation.deadline,
-    needsClarification: interpretation.needsClarification
+    needsClarification: interpretation.needsClarification,
+    proposedTime: interpretation.proposedTime
   };
 
   if (pendingPlannerIndex !== null) {
@@ -280,7 +296,7 @@ form.addEventListener("submit", async (event) => {
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, conversation: priorConversation, plan: scheduleItems })
+      body: JSON.stringify({ message, conversation: priorConversation, plan: scheduleItems, radar: plannerItems })
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "i couldn’t make sense of that just now.");
@@ -289,6 +305,7 @@ form.addEventListener("submit", async (event) => {
     history.push({ role: "assistant", content: data.reply });
     captureForPlanner(data.interpretation);
     captureScheduleItem(data.interpretation);
+    captureProposal(data.interpretation);
   } catch (error) {
     thinking.remove();
     errorBox.textContent = error.message;

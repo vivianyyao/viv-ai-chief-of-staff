@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { createPlanFromTask, interpretLocally } from "./demo.js";
 import { hasUsableAnthropicKey, interpretWithClaude, NeedsMoreDetailError } from "./interpreter.js";
 import { DateTime } from "luxon";
-import { interpretSmsLocally, interpretSmsWithClaude } from "./sms-interpreter.js";
+import { interpretSmsLocally, interpretSmsWithClaude, type RadarItem } from "./sms-interpreter.js";
 import { processSmsMessage, type SmsInterpreter } from "./sms-service.js";
 import { getCalendarEvents } from "./calendar.js";
 
@@ -28,6 +28,24 @@ export function normalizeLocalPlan(input: unknown): LocalPlanItem[] {
     return title && /^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end)
       ? [{ title, date: date || null, start, end, details: details || null }]
       : [];
+  });
+}
+
+export function normalizeRadar(input: unknown): RadarItem[] {
+  if (!Array.isArray(input)) return [];
+  return input.slice(0, 50).flatMap((entry: unknown) => {
+    if (!entry || typeof entry !== "object") return [];
+    const taskOrRequest = "taskOrRequest" in entry && typeof entry.taskOrRequest === "string"
+      ? entry.taskOrRequest.trim().slice(0, 160)
+      : "";
+    const durationMinutes = "durationMinutes" in entry && typeof entry.durationMinutes === "number"
+      ? Math.max(5, Math.min(480, Math.round(entry.durationMinutes)))
+      : null;
+    const deadline = "deadline" in entry && typeof entry.deadline === "string"
+      ? entry.deadline.trim().slice(0, 80)
+      : null;
+    const needsClarification = "needsClarification" in entry && entry.needsClarification === true;
+    return taskOrRequest ? [{ taskOrRequest, durationMinutes, deadline: deadline || null, needsClarification }] : [];
   });
 }
 
@@ -79,11 +97,12 @@ demoApp.post("/api/chat", async (req, res) => {
       })
     : [];
   const plan = normalizeLocalPlan(req.body?.plan);
+  const radar = normalizeRadar(req.body?.radar);
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
     const usesClaude = Boolean(apiKey && !apiKey.startsWith("your_"));
     const interpret: SmsInterpreter = usesClaude
-      ? (text) => interpretSmsWithClaude(text, { apiKey: apiKey!, model: process.env.ANTHROPIC_MODEL, conversation, plan })
+      ? (text) => interpretSmsWithClaude(text, { apiKey: apiKey!, model: process.env.ANTHROPIC_MODEL, conversation, plan, radar })
       : async (text) => interpretSmsLocally(text);
     const result = await processSmsMessage(message, interpret);
     return res.json({ ...result, interpreter: usesClaude ? "claude" : "local" });

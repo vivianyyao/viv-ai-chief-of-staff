@@ -1,7 +1,7 @@
 import { DateTime } from "luxon";
 import { describe, expect, it } from "vitest";
 import { createDemoPlan } from "../src/demo.js";
-import { normalizeLocalPlan } from "../src/demo-server.js";
+import { normalizeLocalPlan, normalizeRadar } from "../src/demo-server.js";
 
 describe("Viv local experience", () => {
   it("safely carries visible plan items into Viv's reasoning", () => {
@@ -10,6 +10,14 @@ describe("Viv local experience", () => {
       { title: "bad entry", start: "later", end: "soon" }
     ])).toEqual([
       { title: "call with danielle", date: "today", start: "17:00", end: "17:20", details: "recruiter" }
+    ]);
+  });
+
+  it("carries active radar tasks into short follow-up reasoning", () => {
+    expect(normalizeRadar([
+      { taskOrRequest: "apply to one job", durationMinutes: 45, deadline: "today", needsClarification: false }
+    ])).toEqual([
+      { taskOrRequest: "apply to one job", durationMinutes: 45, deadline: "today", needsClarification: false }
     ]);
   });
 
