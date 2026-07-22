@@ -201,7 +201,8 @@ function captureScheduleItem(interpretation) {
 }
 
 function captureForPlanner(interpretation) {
-  if (!interpretation || interpretation.kind !== "task" || !interpretation.taskOrRequest) return;
+  if (!interpretation || !["task", "request"].includes(interpretation.kind) || !interpretation.taskOrRequest) return;
+  if (interpretation.kind === "request" && interpretation.durationMinutes === null && !interpretation.needsClarification) return;
   const item = {
     taskOrRequest: interpretation.taskOrRequest,
     durationMinutes: interpretation.durationMinutes,
