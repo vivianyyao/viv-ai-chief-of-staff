@@ -135,12 +135,13 @@ function renderSchedule() {
   timelineEmpty.hidden = scheduleItems.length > 0;
   scheduleLayer.replaceChildren(...scheduleItems.map((item) => {
     const start = timeToMinutes(item.start);
-    const end = timeToMinutes(item.end);
+    const rawEnd = timeToMinutes(item.end);
+    const end = start !== null && rawEnd !== null && rawEnd <= start ? rawEnd + 24 * 60 : rawEnd;
     const block = document.createElement("button");
     block.type = "button";
     block.className = "schedule-block";
     if (start !== null && end !== null) {
-      block.style.top = `${Math.max(0, (start - 8 * 60) / 60 * 48)}px`;
+      block.style.top = `${Math.max(0, (start - 6 * 60) / 60 * 48)}px`;
       block.style.height = `${Math.max(30, (end - start) / 60 * 48)}px`;
     }
     const title = document.createElement("strong");
