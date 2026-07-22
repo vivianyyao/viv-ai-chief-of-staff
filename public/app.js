@@ -9,8 +9,11 @@ const planView = document.querySelector("#plan-view");
 const planDate = document.querySelector("#plan-date");
 const radarList = document.querySelector("#radar-list");
 const radarCount = document.querySelector("#radar-count");
+const scheduleLayer = document.querySelector("#schedule-layer");
+const timelineEmpty = document.querySelector("#timeline-empty");
 const history = [];
 const plannerItems = [];
+const scheduleItems = [];
 let pendingPlannerIndex = null;
 
 planDate.textContent = new Intl.DateTimeFormat("en-US", {
@@ -68,6 +71,58 @@ function renderPlanner() {
     }
     return article;
   }));
+}
+
+function timeToMinutes(value) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value ?? "");
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function displayTime(value) {
+  const minutes = timeToMinutes(value);
+  if (minutes === null) return value;
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}${minute ? `:${String(minute).padStart(2, "0")}` : ""} ${hour >= 12 ? "pm" : "am"}`;
+}
+
+function renderSchedule() {
+  timelineEmpty.hidden = scheduleItems.length > 0;
+  scheduleLayer.replaceChildren(...scheduleItems.map((item) => {
+    const start = timeToMinutes(item.start);
+    const end = timeToMinutes(item.end);
+    const block = document.createElement("article");
+    block.className = "schedule-block";
+    if (start !== null && end !== null) {
+      block.style.top = `${Math.max(0, (start - 8 * 60) / 60 * 48)}px`;
+      block.style.height = `${Math.max(30, (end - start) / 60 * 48)}px`;
+    }
+    const title = document.createElement("strong");
+    title.textContent = item.title;
+    const time = document.createElement("span");
+    time.textContent = `${displayTime(item.start)}–${displayTime(item.end)}`;
+    block.append(title, time);
+    return block;
+  }));
+}
+
+function captureScheduleItem(interpretation) {
+  if (!interpretation?.shouldAddToPlan || !interpretation.planItemTitle || !interpretation.planItemStart || !interpretation.planItemEnd) return;
+  const item = {
+    title: interpretation.planItemTitle,
+    date: interpretation.planItemDate,
+    start: interpretation.planItemStart,
+    end: interpretation.planItemEnd
+  };
+  const key = `${item.date ?? "today"}|${item.start}|${item.title}`.toLowerCase();
+  const existingIndex = scheduleItems.findIndex((existing) =>
+    `${existing.date ?? "today"}|${existing.start}|${existing.title}`.toLowerCase() === key
+  );
+  if (existingIndex >= 0) scheduleItems[existingIndex] = item;
+  else scheduleItems.push(item);
+  renderSchedule();
 }
 
 function captureForPlanner(interpretation) {
@@ -157,6 +212,7 @@ form.addEventListener("submit", async (event) => {
     addMessage(data.reply, "viv");
     history.push({ role: "assistant", content: data.reply });
     captureForPlanner(data.interpretation);
+    captureScheduleItem(data.interpretation);
   } catch (error) {
     thinking.remove();
     errorBox.textContent = error.message;

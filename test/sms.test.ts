@@ -72,6 +72,25 @@ describe("Viv SMS interpretation", () => {
     })).toBe("i’d do 2:20–4:20 pm today.\n\nit gives you two uninterrupted hours before the dog walk and keeps dinner clear\n\nthat’s a proposal based on what you told me. nothing has been changed.");
   });
 
+  it("confirms a commitment added only to the local plan", () => {
+    expect(writeVivReply({
+      kind: "request",
+      taskOrRequest: "put the recruiter call on my plan",
+      durationMinutes: 20,
+      deadline: null,
+      needsClarification: false,
+      clarificationQuestion: null,
+      availabilityProvided: true,
+      proposedTime: null,
+      recommendationReason: null,
+      shouldAddToPlan: true,
+      planItemTitle: "call with danielle jing",
+      planItemDate: "today",
+      planItemStart: "17:00",
+      planItemEnd: "17:20"
+    })).toBe("added to your local plan.\n\ncall with danielle jing\ntoday, 17:00–17:20\n\nnothing changed outside this preview.");
+  });
+
   it("allows only the exact configured E.164 phone number", () => {
     expect(isAllowedPhone("+14155550123", "+14155550123")).toBe(true);
     expect(isAllowedPhone("+14155550999", "+14155550123")).toBe(false);

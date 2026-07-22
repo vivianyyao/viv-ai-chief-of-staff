@@ -7,6 +7,10 @@ export function isAllowedPhone(incoming: string | undefined, allowed: string): b
 }
 
 export function writeVivReply(value: SmsInterpretation): string {
+  if (value.shouldAddToPlan && value.planItemTitle && value.planItemStart && value.planItemEnd) {
+    const date = value.planItemDate ? `${value.planItemDate}, ` : "";
+    return `added to your local plan.\n\n${value.planItemTitle}\n${date}${value.planItemStart}–${value.planItemEnd}\n\nnothing changed outside this preview.`;
+  }
   if (value.kind === "context") {
     if (value.availabilityProvided) {
       return "got it.\n\ni’ll keep that in mind while we find the best time.\n\nnothing has been changed.";

@@ -10,7 +10,12 @@ export const smsInterpretationSchema = z.object({
   clarificationQuestion: z.string().trim().min(2).max(160).nullable(),
   availabilityProvided: z.boolean().optional(),
   proposedTime: z.string().trim().min(2).max(100).nullable().optional(),
-  recommendationReason: z.string().trim().min(2).max(280).nullable().optional()
+  recommendationReason: z.string().trim().min(2).max(280).nullable().optional(),
+  shouldAddToPlan: z.boolean().optional(),
+  planItemTitle: z.string().trim().min(2).max(120).nullable().optional(),
+  planItemDate: z.string().trim().min(2).max(40).nullable().optional(),
+  planItemStart: z.string().trim().min(2).max(20).nullable().optional(),
+  planItemEnd: z.string().trim().min(2).max(20).nullable().optional()
 }).strict().superRefine((value, context) => {
   if (value.kind !== "context" && !value.taskOrRequest) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "task or request is required", path: ["taskOrRequest"] });
@@ -36,9 +41,14 @@ const smsTool: Anthropic.Tool = {
       clarificationQuestion: { type: ["string", "null"], description: "One short lowercase question when clarification is needed" },
       availabilityProvided: { type: "boolean", description: "True when the newest message manually provides any schedule commitment, busy time, or free time" },
       proposedTime: { type: ["string", "null"], description: "A concise lowercase proposed time block based only on availability the user supplied, or null" },
-      recommendationReason: { type: ["string", "null"], description: "One calm lowercase sentence explaining why the proposed block fits, or null" }
+      recommendationReason: { type: ["string", "null"], description: "One calm lowercase sentence explaining why the proposed block fits, or null" },
+      shouldAddToPlan: { type: "boolean", description: "True only when the user explicitly asks to add or put a commitment on the local plan" },
+      planItemTitle: { type: ["string", "null"], description: "Short lowercase commitment title for the local plan, or null" },
+      planItemDate: { type: ["string", "null"], description: "User-facing date such as today or tomorrow, or null" },
+      planItemStart: { type: ["string", "null"], description: "24-hour local start time in HH:MM format, or null" },
+      planItemEnd: { type: ["string", "null"], description: "24-hour local end time in HH:MM format, or null" }
     },
-    required: ["kind", "taskOrRequest", "durationMinutes", "deadline", "needsClarification", "clarificationQuestion", "availabilityProvided", "proposedTime", "recommendationReason"],
+    required: ["kind", "taskOrRequest", "durationMinutes", "deadline", "needsClarification", "clarificationQuestion", "availabilityProvided", "proposedTime", "recommendationReason", "shouldAddToPlan", "planItemTitle", "planItemDate", "planItemStart", "planItemEnd"],
     additionalProperties: false
   }
 };
@@ -56,7 +66,7 @@ export async function interpretSmsWithClaude(message: string, options: {
   const response = await client.messages.create({
     model: options.model ?? "claude-sonnet-4-5",
     max_tokens: 400,
-    system: `You interpret texts for Viv, a calm AI chief of staff. Always call interpret_text once. Use lowercase throughout. A clear action is a task. A question or ask is a request. A feeling or life update without an action is context. Capture a duration only when the user explicitly states one; never guess how long a task takes. Distinguish the duration of an event from the duration of a task preparing for that event: "prep for a 30-minute interview" does not mean the prep takes 30 minutes. Capture the task deadline only when stated. For preparation, an event start is the deadline: "prep for an interview tomorrow at 10:30" means the task is due before tomorrow at 10:30. If an actionable task has no duration, set needsClarification true and ask exactly: how long should i set aside? When conversation history is provided, use relevant earlier details, but classify the newest message by what it contributes. If the newest message only supplies a calendar commitment, busy time, or free time for an existing scheduling conversation, classify it as context, set taskOrRequest null, set availabilityProvided true, and do not repeat the earlier task. A request to find, choose, or schedule a time is a request, not a new task; do not turn the requested planning day into the underlying task's deadline. User-described commitments or free time are usable availability even without calendar access. For a scheduling request with enough user-supplied availability and a known task duration, choose one specific uninterrupted block, set proposedTime, and explain the key tradeoff naturally in recommendationReason. Use only the schedule the user supplied, never claim to have checked a calendar, and never claim anything was changed. If availability is insufficient, leave proposedTime and recommendationReason null. Current local date and time: ${new Intl.DateTimeFormat("en-US", { dateStyle: "full", timeStyle: "short", timeZone: process.env.TIME_ZONE ?? "America/Los_Angeles" }).format(new Date())}. Do not expose hidden chain-of-thought.`,
+    system: `You interpret texts for Viv, a calm AI chief of staff. Always call interpret_text once. Use lowercase throughout. A clear action is a task. A question or ask is a request. A feeling or life update without an action is context. Capture a duration only when the user explicitly states one; never guess how long a task takes. Distinguish the duration of an event from the duration of a task preparing for that event: "prep for a 30-minute interview" does not mean the prep takes 30 minutes. Capture the task deadline only when stated. For preparation, an event start is the deadline: "prep for an interview tomorrow at 10:30" means the task is due before tomorrow at 10:30. If an actionable task has no duration, set needsClarification true and ask exactly: how long should i set aside? When conversation history is provided, use relevant earlier details, but classify the newest message by what it contributes. If the newest message only supplies a calendar commitment, busy time, or free time for an existing scheduling conversation, classify it as context, set taskOrRequest null, set availabilityProvided true, and do not repeat the earlier task. Extract a described commitment into planItemTitle, planItemDate, planItemStart, and planItemEnd when those details are known. If a follow-up says to add it, put it, or place it on the plan, use the earlier commitment details and set shouldAddToPlan true. Never set shouldAddToPlan merely because a commitment was mentioned; the user must explicitly ask. A request to find, choose, or schedule a time is a request, not a new task; do not turn the requested planning day into the underlying task's deadline. User-described commitments or free time are usable availability even without calendar access. For a scheduling request with enough user-supplied availability and a known task duration, choose one specific uninterrupted block, set proposedTime, and explain the key tradeoff naturally in recommendationReason. Use only the schedule the user supplied, never claim to have checked a calendar, and never claim anything was changed outside the local preview. If availability is insufficient, leave proposedTime and recommendationReason null. Current local date and time: ${new Intl.DateTimeFormat("en-US", { dateStyle: "full", timeStyle: "short", timeZone: process.env.TIME_ZONE ?? "America/Los_Angeles" }).format(new Date())}. Do not expose hidden chain-of-thought.`,
     messages: [...(options.conversation ?? []), { role: "user", content: message }],
     tools: [smsTool],
     tool_choice: { type: "tool", name: "interpret_text" }
@@ -89,6 +99,11 @@ export function interpretSmsLocally(message: string): SmsInterpretation {
     clarificationQuestion: needsClarification ? "how long should i set aside?" : null,
     availabilityProvided: false,
     proposedTime: null,
-    recommendationReason: null
+    recommendationReason: null,
+    shouldAddToPlan: false,
+    planItemTitle: null,
+    planItemDate: null,
+    planItemStart: null,
+    planItemEnd: null
   };
 }
