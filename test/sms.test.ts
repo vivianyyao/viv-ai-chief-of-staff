@@ -72,6 +72,20 @@ describe("Viv SMS interpretation", () => {
     })).toBe("i’d do 2:20–4:20 pm today.\n\nit gives you two uninterrupted hours before the dog walk and keeps dinner clear\n\nthat’s a proposal based on what you told me. nothing has been changed.");
   });
 
+  it("uses a recommendation produced from the local plan", () => {
+    expect(writeVivReply({
+      kind: "request",
+      taskOrRequest: "when should i do interview prep",
+      durationMinutes: 60,
+      deadline: "later today",
+      needsClarification: false,
+      clarificationQuestion: null,
+      availabilityProvided: false,
+      proposedTime: "3:30–4:30 pm today",
+      recommendationReason: "it gives you an uninterrupted hour before your 5:00 pm call"
+    })).toContain("i’d do 3:30–4:30 pm today");
+  });
+
   it("confirms a commitment added only to the local plan", () => {
     expect(writeVivReply({
       kind: "context",

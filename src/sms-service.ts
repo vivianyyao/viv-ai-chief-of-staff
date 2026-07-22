@@ -21,7 +21,7 @@ export function writeVivReply(value: SmsInterpretation): string {
     return `got it.\n\n${value.clarificationQuestion ?? "what detail should i keep in mind?"}`;
   }
   if (value.kind === "request" && /\b(find|choose|pick|schedule|time slot|when)\b/i.test(value.taskOrRequest ?? "")) {
-    if (value.availabilityProvided && value.proposedTime) {
+    if (value.proposedTime) {
       const reason = value.recommendationReason ? `\n\n${value.recommendationReason}` : "";
       return `i’d do ${value.proposedTime}.${reason}\n\nthat’s a proposal based on what you told me. nothing has been changed.`;
     }

@@ -1,8 +1,18 @@
 import { DateTime } from "luxon";
 import { describe, expect, it } from "vitest";
 import { createDemoPlan } from "../src/demo.js";
+import { normalizeLocalPlan } from "../src/demo-server.js";
 
 describe("Viv local experience", () => {
+  it("safely carries visible plan items into Viv's reasoning", () => {
+    expect(normalizeLocalPlan([
+      { title: "call with danielle", date: "today", start: "17:00", end: "17:20", details: "recruiter" },
+      { title: "bad entry", start: "later", end: "soon" }
+    ])).toEqual([
+      { title: "call with danielle", date: "today", start: "17:00", end: "17:20", details: "recruiter" }
+    ]);
+  });
+
   it("interprets a task and proposes a non-conflicting block", () => {
     const now = DateTime.fromISO("2026-07-22T08:00:00", { zone: "America/Los_Angeles" });
     const result = createDemoPlan("Finish the budget deck, about 90 minutes", now);

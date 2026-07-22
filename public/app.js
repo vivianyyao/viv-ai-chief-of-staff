@@ -251,7 +251,7 @@ form.addEventListener("submit", async (event) => {
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, conversation: priorConversation })
+      body: JSON.stringify({ message, conversation: priorConversation, plan: scheduleItems })
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "i couldn’t make sense of that just now.");
