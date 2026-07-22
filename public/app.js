@@ -259,7 +259,7 @@ form.addEventListener("submit", async (event) => {
   const message = input.value.trim();
   if (!message || sendButton.disabled) return;
   errorBox.hidden = true;
-  addMessage(message, "user");
+  const userRow = addMessage(message, "user");
   const priorConversation = history.slice(-10);
   history.push({ role: "user", content: message });
   saveMemory();
@@ -282,6 +282,11 @@ form.addEventListener("submit", async (event) => {
     updateStateFromInterpretation(data.interpretation);
   } catch (error) {
     thinking.remove();
+    userRow.remove();
+    if (history.at(-1)?.role === "user" && history.at(-1)?.content === message) history.pop();
+    input.value = message;
+    resizeInput();
+    saveMemory();
     errorBox.textContent = error instanceof Error ? error.message : "something got in the way. try that again.";
     errorBox.hidden = false;
   } finally {

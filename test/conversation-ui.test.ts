@@ -31,4 +31,9 @@ describe("conversation-first browser experience", () => {
     expect(app).toContain("morningBriefDate === todayIso");
     expect(app).toContain("localStorage.setItem(memoryKey");
   });
+
+  it("restores a failed message to the composer instead of duplicating it", () => {
+    expect(app).toContain("userRow.remove()");
+    expect(app).toContain("input.value = message");
+  });
 });

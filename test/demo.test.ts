@@ -1,7 +1,7 @@
 import { DateTime } from "luxon";
 import { describe, expect, it } from "vitest";
 import { createDemoPlan } from "../src/demo.js";
-import { normalizeLocalPlan, normalizeRadar } from "../src/demo-server.js";
+import { buildScheduleReply, normalizeLocalPlan, normalizeRadar } from "../src/demo-server.js";
 
 describe("Viv local experience", () => {
   it("safely carries visible plan items into Viv's reasoning", () => {
@@ -19,6 +19,13 @@ describe("Viv local experience", () => {
     ])).toEqual([
       { taskOrRequest: "apply to one job", durationMinutes: 45, deadline: "today", needsClarification: false }
     ]);
+  });
+
+  it("answers a schedule question from known commitments", () => {
+    expect(buildScheduleReply([
+      { title: "badminton", date: "today", start: "19:30", end: "22:00", details: null },
+      { title: "call with danielle", date: "today", start: "17:00", end: "17:20", details: "recruiter" }
+    ])).toBe("here’s what i have for today:\n\n5:00 pm–5:20 pm\ncall with danielle\n\n7:30 pm–10:00 pm\nbadminton");
   });
 
   it("interprets a task and proposes a non-conflicting block", () => {

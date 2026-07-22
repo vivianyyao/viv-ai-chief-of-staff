@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { createPlanFromTask, interpretLocally } from "./demo.js";
 import { hasUsableAnthropicKey, interpretWithClaude, NeedsMoreDetailError } from "./interpreter.js";
 import { DateTime } from "luxon";
-import { interpretSmsLocally, interpretSmsWithClaude, type RadarItem } from "./sms-interpreter.js";
+import { applyRadarMemory, interpretSmsLocally, interpretSmsWithClaude, type RadarItem } from "./sms-interpreter.js";
 import { processSmsMessage, type SmsInterpreter } from "./sms-service.js";
 import { getCalendarEvents } from "./calendar.js";
 
@@ -47,6 +47,21 @@ export function normalizeRadar(input: unknown): RadarItem[] {
     const needsClarification = "needsClarification" in entry && entry.needsClarification === true;
     return taskOrRequest ? [{ taskOrRequest, durationMinutes, deadline: deadline || null, needsClarification }] : [];
   });
+}
+
+function displayTime(value: string): string {
+  const [hour, minute] = value.split(":").map(Number);
+  const suffix = hour! >= 12 ? "pm" : "am";
+  return `${hour! % 12 || 12}:${String(minute).padStart(2, "0")} ${suffix}`;
+}
+
+export function buildScheduleReply(plan: LocalPlanItem[]): string {
+  if (plan.length === 0) return "i don’t have anything fixed on your day yet.";
+  const agenda = [...plan]
+    .sort((left, right) => left.start.localeCompare(right.start))
+    .map((item) => `${displayTime(item.start)}–${displayTime(item.end)}\n${item.title}`)
+    .join("\n\n");
+  return `here’s what i have for today:\n\n${agenda}`;
 }
 
 export const demoApp = express();
@@ -98,14 +113,30 @@ demoApp.post("/api/chat", async (req, res) => {
     : [];
   const plan = normalizeLocalPlan(req.body?.plan);
   const radar = normalizeRadar(req.body?.radar);
+  if (/\b(?:what(?:'s| is)|show|tell me).*(?:full )?(?:schedule|calendar|on my day)\b/i.test(message)) {
+    return res.json({
+      interpretation: {
+        kind: "request", intent: "advice_request", taskOrRequest: "review today’s schedule",
+        durationMinutes: null, deadline: "today", needsClarification: false, clarificationQuestion: null
+      },
+      reply: buildScheduleReply(plan),
+      interpreter: "local"
+    });
+  }
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
     const usesClaude = Boolean(apiKey && !apiKey.startsWith("your_"));
-    const interpret: SmsInterpreter = usesClaude
-      ? (text) => interpretSmsWithClaude(text, { apiKey: apiKey!, model: process.env.ANTHROPIC_MODEL, conversation, plan, radar })
-      : async (text) => interpretSmsLocally(text);
-    const result = await processSmsMessage(message, interpret);
-    return res.json({ ...result, interpreter: usesClaude ? "claude" : "local" });
+    if (usesClaude) {
+      try {
+        const interpret: SmsInterpreter = (text) => interpretSmsWithClaude(text, { apiKey: apiKey!, model: process.env.ANTHROPIC_MODEL, conversation, plan, radar });
+        const result = await processSmsMessage(message, interpret);
+        return res.json({ ...result, interpreter: "claude" });
+      } catch (error) {
+        console.error("Viv Claude interpretation failed; using local fallback", error instanceof Error ? error.message : error);
+      }
+    }
+    const result = await processSmsMessage(message, async (text) => applyRadarMemory(interpretSmsLocally(text), radar));
+    return res.json({ ...result, interpreter: usesClaude ? "local-fallback" : "local" });
   } catch (error) {
     console.error("Viv chat failed", error instanceof Error ? error.message : error);
     return res.status(502).json({ error: "i’m having trouble reading that right now. try me again in a moment." });
