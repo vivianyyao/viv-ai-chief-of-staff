@@ -74,8 +74,8 @@ describe("Viv SMS interpretation", () => {
 
   it("confirms a commitment added only to the local plan", () => {
     expect(writeVivReply({
-      kind: "request",
-      taskOrRequest: "put the recruiter call on my plan",
+      kind: "context",
+      taskOrRequest: null,
       durationMinutes: 20,
       deadline: null,
       needsClarification: false,
