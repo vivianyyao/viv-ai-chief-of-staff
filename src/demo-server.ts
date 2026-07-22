@@ -129,7 +129,7 @@ demoApp.post("/api/demo", async (req, res) => {
 });
 
 if (process.env.NODE_ENV !== "test") {
-  const port = 3000;
+  const port = Number(process.env.PORT ?? 3000);
   const server = demoApp.listen(port, "127.0.0.1", () => {
     const url = `http://127.0.0.1:${port}`;
     console.log(`\nViv is ready: ${url}\nPress Control + C when you are finished.`);

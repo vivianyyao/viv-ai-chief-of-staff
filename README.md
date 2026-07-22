@@ -7,9 +7,10 @@ Viv is an AI chief of staff designed for text messages. The current MVP accepts 
 ## What it does not do yet
 
 - It cannot create, move, or delete calendar events.
-- It does not remember earlier messages or handle confirmations yet.
+- It remembers chat, radar tasks, local commitments, and tentative proposals in this browser.
+- It does not handle yes/no confirmations yet.
 - It does not support multiple people.
-- It does not store tasks or message history.
+- It does not sync memory across browsers or devices.
 - It is not permanently hosted.
 - Real personalized SMS replies require a paid, registered Twilio sender.
 

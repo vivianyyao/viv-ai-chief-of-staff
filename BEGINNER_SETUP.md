@@ -27,7 +27,7 @@ The local conversation page runs the same Claude interpretation without sending 
 
 ## What it does not do
 
-It can read today's Google Calendar after you approve read-only access. It does not change calendars, send reminders, store task history, or support several users.
+It can read today's Google Calendar after you approve read-only access. It saves chat, radar tasks, local commitments, and tentative proposals privately in this browser so a refresh does not erase them. It does not change calendars, send reminders, sync memory across devices, or support several users.
 
 ## Accounts you will eventually need
 

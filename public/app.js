@@ -17,10 +17,64 @@ const eventDialogTitle = document.querySelector("#event-dialog-title");
 const eventDialogDate = document.querySelector("#event-dialog-date");
 const eventDialogTime = document.querySelector("#event-dialog-time");
 const eventDialogDetails = document.querySelector("#event-dialog-details");
-const history = [];
-const plannerItems = [];
-const scheduleItems = [];
-let pendingPlannerIndex = null;
+const memoryKey = "viv-local-memory-v1";
+
+function loadMemory() {
+  try {
+    const value = JSON.parse(localStorage.getItem(memoryKey) ?? "{}");
+    return {
+      history: Array.isArray(value.history) ? value.history.slice(-100) : [],
+      plannerItems: Array.isArray(value.plannerItems) ? value.plannerItems.slice(0, 100) : [],
+      scheduleItems: Array.isArray(value.scheduleItems) ? value.scheduleItems.slice(0, 100) : []
+    };
+  } catch {
+    return { history: [], plannerItems: [], scheduleItems: [] };
+  }
+}
+
+const savedMemory = loadMemory();
+const history = savedMemory.history;
+const plannerItems = savedMemory.plannerItems;
+const scheduleItems = savedMemory.scheduleItems.filter((item) => item?.source !== "google");
+let pendingPlannerIndex = plannerItems.findIndex((item) => item?.needsClarification);
+if (pendingPlannerIndex < 0) pendingPlannerIndex = null;
+
+function saveMemory() {
+  try {
+    localStorage.setItem(memoryKey, JSON.stringify({
+      history: history.slice(-100),
+      plannerItems: plannerItems.slice(0, 100),
+      scheduleItems: scheduleItems.filter((item) => item?.source !== "google").slice(0, 100)
+    }));
+  } catch {
+    // Viv still works when private browser storage is unavailable.
+  }
+}
+
+function toLocalIso(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+const todayIso = toLocalIso(new Date());
+
+function resolvePlanDate(value) {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized || normalized === "today") return todayIso;
+  const date = new Date();
+  if (normalized === "tomorrow") {
+    date.setDate(date.getDate() + 1);
+    return toLocalIso(date);
+  }
+  const weekdays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const weekday = weekdays.indexOf(normalized);
+  if (weekday >= 0) {
+    let daysAhead = (weekday - date.getDay() + 7) % 7;
+    if (daysAhead === 0) daysAhead = 7;
+    date.setDate(date.getDate() + daysAhead);
+    return toLocalIso(date);
+  }
+  return value;
+}
 
 planDate.textContent = new Intl.DateTimeFormat("en-US", {
   weekday: "long",
@@ -132,7 +186,8 @@ eventDialog.addEventListener("click", (event) => {
 });
 
 function renderSchedule() {
-  scheduleLayer.replaceChildren(...scheduleItems.map((item) => {
+  const todaysItems = scheduleItems.filter((item) => !item.date || item.date === "today" || item.date === todayIso);
+  scheduleLayer.replaceChildren(...todaysItems.map((item) => {
     const start = timeToMinutes(item.start);
     const rawEnd = timeToMinutes(item.end);
     const end = start !== null && rawEnd !== null && rawEnd <= start ? rawEnd + 24 * 60 : rawEnd;
@@ -191,13 +246,14 @@ function captureScheduleItem(interpretation) {
   if (!interpretation?.shouldAddToPlan || !interpretation.planItemTitle || !interpretation.planItemStart || !interpretation.planItemEnd) return;
   const item = {
     title: interpretation.planItemTitle,
-    date: interpretation.planItemDate,
+    date: resolvePlanDate(interpretation.planItemDate),
     start: interpretation.planItemStart,
     end: interpretation.planItemEnd,
     details: interpretation.planItemDetails
   };
   upsertScheduleItem(item);
   renderSchedule();
+  saveMemory();
 }
 
 function captureProposal(interpretation) {
@@ -207,12 +263,13 @@ function captureProposal(interpretation) {
     id: normalizedTitle,
     source: "proposal",
     title: interpretation.taskOrRequest,
-    date: interpretation.proposedDate ?? "today",
+    date: resolvePlanDate(interpretation.proposedDate),
     start: interpretation.proposedStart,
     end: interpretation.proposedEnd,
     details: "viv’s proposed time. not confirmed."
   });
   renderSchedule();
+  saveMemory();
 }
 
 function captureForPlanner(interpretation) {
@@ -243,6 +300,7 @@ function captureForPlanner(interpretation) {
     }
   }
   renderPlanner();
+  saveMemory();
 }
 
 function scrollToLatest() {
@@ -274,6 +332,19 @@ function addThinking() {
   return row;
 }
 
+function restoreMemoryView() {
+  if (history.length > 0) {
+    conversation.querySelector(".intro-message")?.remove();
+    for (const item of history) {
+      if ((item.role === "user" || item.role === "assistant") && typeof item.content === "string") {
+        addMessage(item.content, item.role === "user" ? "user" : "viv");
+      }
+    }
+  }
+  renderPlanner();
+  renderSchedule();
+}
+
 function resizeInput() {
   input.style.height = "auto";
   input.style.height = `${Math.min(input.scrollHeight, 132)}px`;
@@ -287,6 +358,7 @@ form.addEventListener("submit", async (event) => {
   addMessage(message, "user");
   const priorConversation = history.slice(-8);
   history.push({ role: "user", content: message });
+  saveMemory();
   input.value = "";
   resizeInput();
   sendButton.disabled = true;
@@ -306,6 +378,7 @@ form.addEventListener("submit", async (event) => {
     captureForPlanner(data.interpretation);
     captureScheduleItem(data.interpretation);
     captureProposal(data.interpretation);
+    saveMemory();
   } catch (error) {
     thinking.remove();
     errorBox.textContent = error.message;
@@ -324,4 +397,5 @@ input.addEventListener("keydown", (event) => {
   }
 });
 input.focus();
+restoreMemoryView();
 loadCalendar();
