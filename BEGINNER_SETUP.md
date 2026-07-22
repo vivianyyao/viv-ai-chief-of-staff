@@ -23,11 +23,11 @@ The current path is:
 4. Viv writes a short, natural reply.
 5. Twilio returns the reply when a paid, registered sender is connected.
 
-The local conversation page runs the same Claude interpretation without sending a real text.
+The local browser thread runs the same Claude interpretation without sending a real text. It is intentionally one continuous conversation rather than a dashboard.
 
 ## What it does not do
 
-It can read today's Google Calendar after you approve read-only access. It saves chat, radar tasks, local commitments, and tentative proposals privately in this browser so a refresh does not erase them. It does not change calendars, send reminders, sync memory across devices, or support several users.
+It can read today's Google Calendar after you approve read-only access. It saves the conversation, known tasks, local commitments, and tentative recommendations privately in this browser so a refresh does not erase them. It does not change calendars, send reminders, sync memory across devices, or support several users.
 
 ## Accounts you will eventually need
 

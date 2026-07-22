@@ -3,120 +3,61 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f5f1e9">
+  <meta name="theme-color" content="#f4f0e8">
   <title>viv · your ai chief of staff</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <main class="shell">
-    <header class="chat-header">
+  <main class="app-shell">
+    <header class="app-header">
       <div class="identity">
         <div class="avatar" aria-hidden="true">v</div>
-        <div><h1>viv</h1><p>your ai chief of staff</p></div>
+        <div>
+          <h1>viv</h1>
+          <p>your ai chief of staff</p>
+        </div>
       </div>
-      <nav class="view-tabs" aria-label="viv views">
-        <button class="view-tab is-active" type="button" data-view="chat" aria-selected="true">chat</button>
-        <button class="view-tab" type="button" data-view="plan" aria-selected="false">plan</button>
-      </nav>
-      <div class="presence"><i></i><span>local</span></div>
+      <div class="header-actions">
+        <div class="presence"><i></i><span>available</span></div>
+        <button id="developer-toggle" class="developer-toggle" type="button" aria-label="open developer tools" title="developer tools">•••</button>
+      </div>
     </header>
 
-    <section id="chat-view" class="app-view chat-view" aria-label="chat with viv">
-      <section id="conversation" class="conversation" aria-live="polite" aria-label="conversation with viv">
-        <div class="day-divider"><span>today</span></div>
-        <article class="message-row viv-row intro-message">
-          <div class="message viv-message">
-            <p>hi. what’s taking up space?</p>
-            <p>send me a task, a loose end, or just how you’re feeling.</p>
-          </div>
-        </article>
-      </section>
-
-      <p id="error" class="error" role="alert" hidden></p>
-
-      <form id="chat-form" class="composer-wrap">
-        <label class="sr-only" for="message">message viv</label>
-        <div class="composer">
-          <textarea id="message" rows="1" placeholder="text what’s on your mind…" autocomplete="off" spellcheck="true"></textarea>
-          <button id="send-button" type="submit" aria-label="send message">
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4"/></svg>
-          </button>
-        </div>
-        <p class="local-note">private local preview · nothing will be changed</p>
-      </form>
+    <section id="conversation" class="conversation" aria-live="polite" aria-label="conversation with viv">
+      <div class="day-divider"><span>today</span></div>
     </section>
 
-    <section id="plan-view" class="app-view plan-view" aria-label="viv plan" hidden>
-      <header class="plan-heading">
-        <div>
-          <p class="eyebrow">today</p>
-          <h2 id="plan-date">wednesday, july 22</h2>
-          <p>a quiet place for what matters and where it might fit.</p>
-        </div>
-        <span class="preview-badge">preview only</span>
-      </header>
+    <p id="error" class="error" role="alert" hidden></p>
 
-      <div class="planner-layout">
-        <section class="schedule-card" aria-labelledby="schedule-title">
-          <header class="card-heading">
-            <div>
-              <p class="eyebrow">your day</p>
-              <h3 id="schedule-title">schedule</h3>
-            </div>
-            <span id="calendar-status" class="connection-note"><i></i>connecting calendar</span>
-          </header>
-          <div class="timeline" aria-label="day timeline from 6 am to midnight">
-            <div id="schedule-layer" class="schedule-layer" aria-live="polite"></div>
-            <div class="time-row"><time>6 am</time><i></i></div>
-            <div class="time-row"><time>7 am</time><i></i></div>
-            <div class="time-row"><time>8 am</time><i></i></div>
-            <div class="time-row"><time>9 am</time><i></i></div>
-            <div class="time-row"><time>10 am</time><i></i></div>
-            <div class="time-row"><time>11 am</time><i></i></div>
-            <div class="time-row"><time>12 pm</time><i></i></div>
-            <div class="time-row"><time>1 pm</time><i></i></div>
-            <div class="time-row"><time>2 pm</time><i></i></div>
-            <div class="time-row"><time>3 pm</time><i></i></div>
-            <div class="time-row"><time>4 pm</time><i></i></div>
-            <div class="time-row"><time>5 pm</time><i></i></div>
-            <div class="time-row"><time>6 pm</time><i></i></div>
-            <div class="time-row"><time>7 pm</time><i></i></div>
-            <div class="time-row"><time>8 pm</time><i></i></div>
-            <div class="time-row"><time>9 pm</time><i></i></div>
-            <div class="time-row"><time>10 pm</time><i></i></div>
-            <div class="time-row"><time>11 pm</time><i></i></div>
-            <div class="time-row"><time>12 am</time><i></i></div>
-          </div>
-        </section>
-
-        <aside class="radar-card" aria-labelledby="radar-title">
-          <header class="card-heading">
-            <div>
-              <p class="eyebrow">captured from chat</p>
-              <h3 id="radar-title">on viv’s radar</h3>
-            </div>
-            <span id="radar-count" class="radar-count">0</span>
-          </header>
-          <div id="radar-list" class="radar-list" aria-live="polite">
-            <div class="radar-empty">
-              <span>nothing here yet.</span>
-              <p>tell viv what’s on your mind and clear tasks will collect here.</p>
-              <button type="button" data-switch-to-chat>go to chat</button>
-            </div>
-          </div>
-          <p class="radar-note">saved privately in this browser.</p>
-        </aside>
+    <form id="chat-form" class="composer-wrap">
+      <label class="sr-only" for="message">message viv</label>
+      <div class="composer">
+        <textarea id="message" rows="1" placeholder="text viv..." autocomplete="off" spellcheck="true"></textarea>
+        <button id="send-button" type="submit" aria-label="send message">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4"/></svg>
+        </button>
       </div>
-    </section>
-
-    <dialog id="event-dialog" class="event-dialog" aria-labelledby="event-dialog-title">
-      <button id="event-dialog-close" class="event-dialog-close" type="button" aria-label="close event details">×</button>
-      <p id="event-dialog-date" class="eyebrow"></p>
-      <h2 id="event-dialog-title"></h2>
-      <p id="event-dialog-time" class="event-dialog-time"></p>
-      <div id="event-dialog-details" class="event-dialog-details" hidden></div>
-    </dialog>
+      <p class="local-note">private · remembered on this browser</p>
+    </form>
   </main>
-  <script src="/app.js"></script>
+
+  <dialog id="developer-panel" class="developer-panel">
+    <div class="developer-heading">
+      <div><span>development</span><h2>viv’s working state</h2></div>
+      <button id="developer-close" type="button" aria-label="close developer tools">×</button>
+    </div>
+    <dl class="developer-summary">
+      <div><dt>last intent</dt><dd id="dev-intent">none yet</dd></div>
+      <div><dt>pending</dt><dd id="dev-pending">nothing pending</dd></div>
+      <div><dt>calendar source</dt><dd id="dev-calendar-source">checking</dd></div>
+    </dl>
+    <section><h3>known tasks</h3><pre id="dev-tasks">[]</pre></section>
+    <section><h3>schedule context</h3><pre id="dev-schedule">[]</pre></section>
+    <section><h3>recent state</h3><pre id="dev-state">{}</pre></section>
+    <button id="reset-conversation" class="reset-button" type="button">reset local conversation</button>
+    <p class="shortcut-note">shortcut: command/control + shift + d</p>
+  </dialog>
+
+  <script type="module" src="/app.js"></script>
 </body>
 </html>

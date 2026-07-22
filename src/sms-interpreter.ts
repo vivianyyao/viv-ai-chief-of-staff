@@ -3,6 +3,7 @@ import { z } from "zod";
 
 export const smsInterpretationSchema = z.object({
   kind: z.enum(["task", "request", "context"]),
+  intent: z.enum(["new_task", "update", "personal_context", "scheduling_request", "advice_request", "clarification_answer", "confirmation", "rejection", "general_conversation"]).optional(),
   taskOrRequest: z.string().trim().min(2).max(160).nullable(),
   durationMinutes: z.number().int().min(5).max(480).nullable(),
   deadline: z.string().trim().min(2).max(80).nullable(),
@@ -53,6 +54,7 @@ const smsTool: Anthropic.Tool = {
     type: "object",
     properties: {
       kind: { type: "string", enum: ["task", "request", "context"] },
+      intent: { type: "string", enum: ["new_task", "update", "personal_context", "scheduling_request", "advice_request", "clarification_answer", "confirmation", "rejection", "general_conversation"], description: "Invisible internal classification for the newest message" },
       taskOrRequest: { type: ["string", "null"], description: "Concise lowercase task or request, or null for context" },
       durationMinutes: { type: ["integer", "null"], minimum: 5, maximum: 480 },
       deadline: { type: ["string", "null"], description: "Concise user-facing deadline such as tomorrow or friday, or null" },
@@ -71,7 +73,7 @@ const smsTool: Anthropic.Tool = {
       planItemEnd: { type: ["string", "null"], description: "24-hour local end time in HH:MM format, or null" },
       planItemDetails: { type: ["string", "null"], description: "Only useful extra context the user supplied beyond title, date, and time. Preserve URLs exactly. Null when there is no extra context" }
     },
-    required: ["kind", "taskOrRequest", "durationMinutes", "deadline", "needsClarification", "clarificationQuestion", "availabilityProvided", "proposedTime", "proposedDate", "proposedStart", "proposedEnd", "recommendationReason", "shouldAddToPlan", "planItemTitle", "planItemDate", "planItemStart", "planItemEnd", "planItemDetails"],
+    required: ["kind", "intent", "taskOrRequest", "durationMinutes", "deadline", "needsClarification", "clarificationQuestion", "availabilityProvided", "proposedTime", "proposedDate", "proposedStart", "proposedEnd", "recommendationReason", "shouldAddToPlan", "planItemTitle", "planItemDate", "planItemStart", "planItemEnd", "planItemDetails"],
     additionalProperties: false
   }
 };
@@ -144,7 +146,7 @@ export async function interpretSmsWithClaude(message: string, options: {
 export function interpretSmsLocally(message: string): SmsInterpretation {
   const normalized = message.trim().toLowerCase().replace(/[’]/g, "'");
   if (/^(i'?m|i am|feeling)\s+(tired|exhausted|overwhelmed|sick|stressed)/.test(normalized)) {
-    return { kind: "context", taskOrRequest: null, durationMinutes: null, deadline: null, needsClarification: false, clarificationQuestion: null };
+    return { kind: "context", intent: "personal_context", taskOrRequest: null, durationMinutes: null, deadline: null, needsClarification: false, clarificationQuestion: null };
   }
   const minuteMatch = normalized.match(/(\d+)\s*(?:minutes?|mins?)/);
   const hourMatch = normalized.match(/(\d+(?:\.\d+)?)\s*hours?/);
@@ -157,6 +159,7 @@ export function interpretSmsLocally(message: string): SmsInterpretation {
   const needsClarification = durationMinutes === null;
   return {
     kind: "task",
+    intent: durationMinutes !== null && /^\s*\d/.test(normalized) ? "clarification_answer" : "new_task",
     taskOrRequest,
     durationMinutes,
     deadline: deadlineMatch?.[1] ?? null,

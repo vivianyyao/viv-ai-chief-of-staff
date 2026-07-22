@@ -9,13 +9,13 @@ export function isAllowedPhone(incoming: string | undefined, allowed: string): b
 export function writeVivReply(value: SmsInterpretation): string {
   if (value.shouldAddToPlan && value.planItemTitle && value.planItemStart && value.planItemEnd) {
     const date = value.planItemDate ? `${value.planItemDate}, ` : "";
-    return `added to your local plan.\n\n${value.planItemTitle}\n${date}${value.planItemStart}–${value.planItemEnd}\n\nnothing changed outside this preview.`;
+    return `i’ll keep this in mind here.\n\n${value.planItemTitle}\n${date}${value.planItemStart}–${value.planItemEnd}\n\nnothing was changed outside this conversation.`;
   }
   if (value.kind === "context") {
     if (value.availabilityProvided) {
       return "got it.\n\ni’ll keep that in mind while we find the best time.\n\nnothing has been changed.";
     }
-    return "understood.\n\ni’m treating that as context, not a task.\n\nonce calendar access is connected, i’ll use that to make a lighter recommendation.";
+    return "understood.\n\ni’ll treat that as context for what i recommend next.";
   }
   if (value.needsClarification) {
     return `got it.\n\n${value.clarificationQuestion ?? "what detail should i keep in mind?"}`;
@@ -25,7 +25,7 @@ export function writeVivReply(value: SmsInterpretation): string {
       const reason = value.recommendationReason ? `\n\n${value.recommendationReason}` : "";
       return `i’d do ${value.proposedTime}.${reason}\n\nthat’s a proposal based on what you told me. nothing has been changed.`;
     }
-    return "i can help with that once calendar access is connected.\n\nright now, i’d be guessing at your availability.\n\ni’m not changing anything yet.";
+    return "i can help with that.\n\nwhat time on your day is already fixed?";
   }
   const details = [value.taskOrRequest];
   if (value.durationMinutes !== null) details.push(`${value.durationMinutes} minutes`);

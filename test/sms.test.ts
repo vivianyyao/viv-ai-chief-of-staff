@@ -61,7 +61,9 @@ describe("Viv SMS interpretation", () => {
   });
 
   it("treats feelings as context", () => {
-    expect(writeVivReply(interpretSmsLocally("i’m exhausted"))).toContain("i’m treating that as context, not a task.");
+    const interpretation = interpretSmsLocally("i’m exhausted");
+    expect(interpretation.intent).toBe("personal_context");
+    expect(writeVivReply(interpretation)).toContain("i’ll treat that as context");
   });
 
   it("acknowledges schedule context without repeating the task", () => {
@@ -78,7 +80,7 @@ describe("Viv SMS interpretation", () => {
     })).toBe("got it.\n\ni’ll keep that in mind while we find the best time.\n\nnothing has been changed.");
   });
 
-  it("does not pretend to find a calendar slot before calendar access exists", () => {
+  it("asks for the missing schedule context instead of inventing a slot", () => {
     expect(writeVivReply({
       kind: "request",
       taskOrRequest: "find the best time slot today for interview prep",
@@ -86,7 +88,7 @@ describe("Viv SMS interpretation", () => {
       deadline: "before tomorrow at 10:30 am",
       needsClarification: false,
       clarificationQuestion: null
-    })).toContain("i’d be guessing at your availability");
+    })).toContain("what time on your day is already fixed?");
   });
 
   it("can recommend a block from availability the user supplied", () => {
@@ -134,7 +136,7 @@ describe("Viv SMS interpretation", () => {
       planItemStart: "17:00",
       planItemEnd: "17:20",
       planItemDetails: "danielle is a recruiter. scheduled on linkedin. https://meet.example.com/viv"
-    })).toBe("added to your local plan.\n\ncall with danielle jing\ntoday, 17:00–17:20\n\nnothing changed outside this preview.");
+    })).toBe("i’ll keep this in mind here.\n\ncall with danielle jing\ntoday, 17:00–17:20\n\nnothing was changed outside this conversation.");
   });
 
   it("allows only the exact configured E.164 phone number", () => {

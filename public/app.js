@@ -3,20 +3,16 @@ const input = document.querySelector("#message");
 const sendButton = document.querySelector("#send-button");
 const conversation = document.querySelector("#conversation");
 const errorBox = document.querySelector("#error");
-const viewTabs = document.querySelectorAll(".view-tab");
-const chatView = document.querySelector("#chat-view");
-const planView = document.querySelector("#plan-view");
-const planDate = document.querySelector("#plan-date");
-const radarList = document.querySelector("#radar-list");
-const radarCount = document.querySelector("#radar-count");
-const scheduleLayer = document.querySelector("#schedule-layer");
-const calendarStatus = document.querySelector("#calendar-status");
-const eventDialog = document.querySelector("#event-dialog");
-const eventDialogClose = document.querySelector("#event-dialog-close");
-const eventDialogTitle = document.querySelector("#event-dialog-title");
-const eventDialogDate = document.querySelector("#event-dialog-date");
-const eventDialogTime = document.querySelector("#event-dialog-time");
-const eventDialogDetails = document.querySelector("#event-dialog-details");
+const developerPanel = document.querySelector("#developer-panel");
+const developerToggle = document.querySelector("#developer-toggle");
+const developerClose = document.querySelector("#developer-close");
+const resetButton = document.querySelector("#reset-conversation");
+const devIntent = document.querySelector("#dev-intent");
+const devPending = document.querySelector("#dev-pending");
+const devCalendarSource = document.querySelector("#dev-calendar-source");
+const devTasks = document.querySelector("#dev-tasks");
+const devSchedule = document.querySelector("#dev-schedule");
+const devState = document.querySelector("#dev-state");
 const memoryKey = "viv-local-memory-v1";
 
 function loadMemory() {
@@ -25,17 +21,25 @@ function loadMemory() {
     return {
       history: Array.isArray(value.history) ? value.history.slice(-100) : [],
       plannerItems: Array.isArray(value.plannerItems) ? value.plannerItems.slice(0, 100) : [],
-      scheduleItems: Array.isArray(value.scheduleItems) ? value.scheduleItems.slice(0, 100) : []
+      scheduleItems: Array.isArray(value.scheduleItems) ? value.scheduleItems.slice(0, 100) : [],
+      lastIntent: typeof value.lastIntent === "string" ? value.lastIntent : null,
+      pendingAction: typeof value.pendingAction === "string" ? value.pendingAction : null,
+      morningBriefDate: typeof value.morningBriefDate === "string" ? value.morningBriefDate : null,
+      morningBriefSource: typeof value.morningBriefSource === "string" ? value.morningBriefSource : null
     };
   } catch {
-    return { history: [], plannerItems: [], scheduleItems: [] };
+    return { history: [], plannerItems: [], scheduleItems: [], lastIntent: null, pendingAction: null, morningBriefDate: null, morningBriefSource: null };
   }
 }
 
-const savedMemory = loadMemory();
-const history = savedMemory.history;
-const plannerItems = savedMemory.plannerItems;
-const scheduleItems = savedMemory.scheduleItems.filter((item) => item?.source !== "google");
+const memory = loadMemory();
+const history = memory.history;
+const plannerItems = memory.plannerItems;
+const scheduleItems = memory.scheduleItems.filter((item) => item?.source !== "google");
+let lastIntent = memory.lastIntent;
+let pendingAction = memory.pendingAction;
+let morningBriefDate = memory.morningBriefDate;
+let morningBriefSource = memory.morningBriefSource;
 let pendingPlannerIndex = plannerItems.findIndex((item) => item?.needsClarification);
 if (pendingPlannerIndex < 0) pendingPlannerIndex = null;
 
@@ -44,10 +48,14 @@ function saveMemory() {
     localStorage.setItem(memoryKey, JSON.stringify({
       history: history.slice(-100),
       plannerItems: plannerItems.slice(0, 100),
-      scheduleItems: scheduleItems.filter((item) => item?.source !== "google").slice(0, 100)
+      scheduleItems: scheduleItems.filter((item) => item?.source !== "google").slice(0, 100),
+      lastIntent,
+      pendingAction,
+      morningBriefDate,
+      morningBriefSource
     }));
   } catch {
-    // Viv still works when private browser storage is unavailable.
+    // Viv can still work when private browser storage is unavailable.
   }
 }
 
@@ -76,240 +84,33 @@ function resolvePlanDate(value) {
   return value;
 }
 
-planDate.textContent = new Intl.DateTimeFormat("en-US", {
-  weekday: "long",
-  month: "long",
-  day: "numeric"
-}).format(new Date()).toLowerCase();
-
-function switchView(view) {
-  const showingChat = view === "chat";
-  chatView.hidden = !showingChat;
-  planView.hidden = showingChat;
-  viewTabs.forEach((tab) => {
-    const active = tab.dataset.view === view;
-    tab.classList.toggle("is-active", active);
-    tab.setAttribute("aria-selected", String(active));
-  });
-  if (showingChat) input.focus();
+function formatTime(value) {
+  const [hours, minutes] = value.split(":").map(Number);
+  const suffix = hours >= 12 ? "pm" : "am";
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${String(minutes).padStart(2, "0")} ${suffix}`;
 }
 
-viewTabs.forEach((tab) => tab.addEventListener("click", () => switchView(tab.dataset.view)));
-document.querySelector("[data-switch-to-chat]").addEventListener("click", () => switchView("chat"));
-
-function plannerDetails(item) {
-  const details = [];
-  if (item.durationMinutes) {
-    const hours = item.durationMinutes / 60;
-    details.push(Number.isInteger(hours) && hours >= 1 ? `${hours} ${hours === 1 ? "hour" : "hours"}` : `${item.durationMinutes} minutes`);
-  }
-  if (item.deadline) details.push(`due ${item.deadline}`);
-  return details;
+function updateDeveloperPanel() {
+  devIntent.textContent = lastIntent ?? "none yet";
+  devPending.textContent = pendingAction ?? "nothing pending";
+  devCalendarSource.textContent = morningBriefSource ?? "checking";
+  devTasks.textContent = JSON.stringify(plannerItems, null, 2);
+  devSchedule.textContent = JSON.stringify(scheduleItems, null, 2);
+  devState.textContent = JSON.stringify({
+    recentMessages: history.slice(-6),
+    pendingClarification: pendingPlannerIndex === null ? null : plannerItems[pendingPlannerIndex]?.taskOrRequest,
+    pendingRecommendation: pendingAction
+  }, null, 2);
 }
 
-function renderPlanner() {
-  radarCount.textContent = String(plannerItems.length);
-  if (plannerItems.length === 0) return;
-
-  radarList.replaceChildren(...plannerItems.map((item) => {
-    const article = document.createElement("article");
-    article.className = "radar-item";
-
-    const status = document.createElement("span");
-    status.className = `radar-status${item.needsClarification ? " needs-detail" : ""}`;
-    status.textContent = item.needsClarification ? "needs a detail" : item.proposedTime ? "time proposed" : "unscheduled";
-
-    const title = document.createElement("h4");
-    title.textContent = item.taskOrRequest;
-
-    const details = plannerDetails(item);
-    article.append(status, title);
-    if (details.length) {
-      const meta = document.createElement("p");
-      meta.textContent = details.join(" · ");
-      article.append(meta);
-    }
-    return article;
-  }));
+function scrollToLatest(behavior = "smooth") {
+  requestAnimationFrame(() => conversation.lastElementChild?.scrollIntoView({ behavior, block: "end" }));
 }
 
-function timeToMinutes(value) {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(value ?? "");
-  if (!match) return null;
-  return Number(match[1]) * 60 + Number(match[2]);
-}
-
-function displayTime(value) {
-  const minutes = timeToMinutes(value);
-  if (minutes === null) return value;
-  const hour = Math.floor(minutes / 60);
-  const minute = minutes % 60;
-  const displayHour = hour % 12 || 12;
-  return `${displayHour}${minute ? `:${String(minute).padStart(2, "0")}` : ""} ${hour >= 12 ? "pm" : "am"}`;
-}
-
-function renderEventDetails(details) {
-  eventDialogDetails.replaceChildren();
-  if (!details?.trim()) {
-    eventDialogDetails.hidden = true;
-    return;
-  }
-  eventDialogDetails.hidden = false;
-  const parts = details.split(/(https?:\/\/[^\s]+)/g);
-  for (const part of parts) {
-    if (/^https?:\/\//.test(part)) {
-      const link = document.createElement("a");
-      link.href = part;
-      link.target = "_blank";
-      link.rel = "noreferrer";
-      link.textContent = part;
-      eventDialogDetails.append(link);
-    } else {
-      eventDialogDetails.append(document.createTextNode(part));
-    }
-  }
-}
-
-function openEventDetails(item) {
-  eventDialogTitle.textContent = item.title;
-  eventDialogDate.textContent = item.date ?? "today";
-  eventDialogTime.textContent = `${displayTime(item.start)}–${displayTime(item.end)}`;
-  renderEventDetails(item.details);
-  eventDialog.showModal();
-}
-
-eventDialogClose.addEventListener("click", () => eventDialog.close());
-eventDialog.addEventListener("click", (event) => {
-  const bounds = eventDialog.getBoundingClientRect();
-  const inside = event.clientX >= bounds.left && event.clientX <= bounds.right && event.clientY >= bounds.top && event.clientY <= bounds.bottom;
-  if (!inside) eventDialog.close();
-});
-
-function renderSchedule() {
-  const todaysItems = scheduleItems.filter((item) => !item.date || item.date === "today" || item.date === todayIso);
-  scheduleLayer.replaceChildren(...todaysItems.map((item) => {
-    const start = timeToMinutes(item.start);
-    const rawEnd = timeToMinutes(item.end);
-    const end = start !== null && rawEnd !== null && rawEnd <= start ? rawEnd + 24 * 60 : rawEnd;
-    const block = document.createElement("button");
-    block.type = "button";
-    block.className = `schedule-block${item.source === "proposal" ? " is-proposed" : ""}`;
-    if (start !== null && end !== null) {
-      block.style.top = `${Math.max(0, (start - 6 * 60) / 60 * 48)}px`;
-      block.style.height = `${Math.max(30, (end - start) / 60 * 48)}px`;
-    }
-    const title = document.createElement("strong");
-    title.textContent = item.title;
-    const time = document.createElement("span");
-    time.textContent = `${displayTime(item.start)}–${displayTime(item.end)}`;
-    block.append(title, time);
-    block.addEventListener("click", () => openEventDetails(item));
-    return block;
-  }));
-}
-
-function upsertScheduleItem(item) {
-  const key = item.id
-    ? `${item.source ?? "local"}|${item.id}`.toLowerCase()
-    : `${item.date ?? "today"}|${item.start}|${item.title}`.toLowerCase();
-  const existingIndex = scheduleItems.findIndex((existing) => {
-    const existingKey = existing.id
-      ? `${existing.source ?? "local"}|${existing.id}`.toLowerCase()
-      : `${existing.date ?? "today"}|${existing.start}|${existing.title}`.toLowerCase();
-    return existingKey === key;
-  });
-  if (existingIndex >= 0) scheduleItems[existingIndex] = item;
-  else scheduleItems.push(item);
-}
-
-async function loadCalendar() {
-  try {
-    const response = await fetch("/api/calendar/today");
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "calendar unavailable");
-    if (!data.connected) {
-      calendarStatus.lastChild.textContent = "calendar not connected";
-      return;
-    }
-    for (const item of data.events ?? []) upsertScheduleItem(item);
-    calendarStatus.classList.add("is-connected");
-    calendarStatus.lastChild.textContent = "calendar connected · read only";
-    renderSchedule();
-  } catch (error) {
-    calendarStatus.lastChild.textContent = /permission/i.test(error.message)
-      ? "calendar reconnect needed"
-      : "calendar unavailable";
-  }
-}
-
-function captureScheduleItem(interpretation) {
-  if (!interpretation?.shouldAddToPlan || !interpretation.planItemTitle || !interpretation.planItemStart || !interpretation.planItemEnd) return;
-  const item = {
-    title: interpretation.planItemTitle,
-    date: resolvePlanDate(interpretation.planItemDate),
-    start: interpretation.planItemStart,
-    end: interpretation.planItemEnd,
-    details: interpretation.planItemDetails
-  };
-  upsertScheduleItem(item);
-  renderSchedule();
-  saveMemory();
-}
-
-function captureProposal(interpretation) {
-  if (!interpretation?.taskOrRequest || !interpretation.proposedStart || !interpretation.proposedEnd) return;
-  const normalizedTitle = interpretation.taskOrRequest.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  upsertScheduleItem({
-    id: normalizedTitle,
-    source: "proposal",
-    title: interpretation.taskOrRequest,
-    date: resolvePlanDate(interpretation.proposedDate),
-    start: interpretation.proposedStart,
-    end: interpretation.proposedEnd,
-    details: "viv’s proposed time. not confirmed."
-  });
-  renderSchedule();
-  saveMemory();
-}
-
-function captureForPlanner(interpretation) {
-  if (!interpretation || !["task", "request"].includes(interpretation.kind) || !interpretation.taskOrRequest) return;
-  if (interpretation.kind === "request" && interpretation.durationMinutes === null && !interpretation.needsClarification) return;
-  const item = {
-    taskOrRequest: interpretation.taskOrRequest,
-    durationMinutes: interpretation.durationMinutes,
-    deadline: interpretation.deadline,
-    needsClarification: interpretation.needsClarification,
-    proposedTime: interpretation.proposedTime
-  };
-
-  if (pendingPlannerIndex !== null) {
-    plannerItems[pendingPlannerIndex] = item;
-    pendingPlannerIndex = item.needsClarification ? pendingPlannerIndex : null;
-  } else {
-    const normalizedTitle = item.taskOrRequest.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-    const existingIndex = plannerItems.findIndex((existing) =>
-      existing.taskOrRequest.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() === normalizedTitle
-    );
-    if (existingIndex >= 0) {
-      plannerItems[existingIndex] = item;
-      if (item.needsClarification) pendingPlannerIndex = existingIndex;
-    } else {
-      plannerItems.unshift(item);
-      if (item.needsClarification) pendingPlannerIndex = 0;
-    }
-  }
-  renderPlanner();
-  saveMemory();
-}
-
-function scrollToLatest() {
-  requestAnimationFrame(() => conversation.lastElementChild?.scrollIntoView({ behavior: "smooth", block: "end" }));
-}
-
-function addMessage(text, sender) {
+function addMessage(text, sender, { animate = true } = {}) {
   const row = document.createElement("article");
-  row.className = `message-row ${sender}-row`;
+  row.className = `message-row ${sender}-row${animate ? "" : " restored"}`;
   const bubble = document.createElement("div");
   bubble.className = `message ${sender}-message`;
   for (const block of text.split(/\n\n+/)) {
@@ -319,7 +120,7 @@ function addMessage(text, sender) {
   }
   row.append(bubble);
   conversation.append(row);
-  scrollToLatest();
+  scrollToLatest(animate ? "smooth" : "auto");
   return row;
 }
 
@@ -332,17 +133,120 @@ function addThinking() {
   return row;
 }
 
-function restoreMemoryView() {
-  if (history.length > 0) {
-    conversation.querySelector(".intro-message")?.remove();
-    for (const item of history) {
-      if ((item.role === "user" || item.role === "assistant") && typeof item.content === "string") {
-        addMessage(item.content, item.role === "user" ? "user" : "viv");
-      }
+function restoreConversation() {
+  for (const item of history) {
+    if ((item.role === "user" || item.role === "assistant") && typeof item.content === "string") {
+      addMessage(item.content, item.role === "user" ? "user" : "viv", { animate: false });
     }
   }
-  renderPlanner();
-  renderSchedule();
+}
+
+function buildMorningBrief(events, connected) {
+  if (connected && events.length > 0) {
+    const agenda = events.slice(0, 4).map((event) => `${formatTime(event.start)}  ${event.title}`).join("\n");
+    const remaining = events.length > 4 ? `\n\nand ${events.length - 4} more thing${events.length - 4 === 1 ? "" : "s"} later.` : "";
+    return `good morning.\n\nhere’s what’s already on your day:\n\n${agenda}${remaining}\n\nanything changed?`;
+  }
+  if (connected) {
+    return "good morning.\n\nyour calendar is clear today.\n\nwhat matters most?";
+  }
+  return "good morning.\n\nhere’s what i’d focus on today:\n\n9:00  finish the application\n11:00  interview prep\n2:00  call mom\n\nthe application is the main thing at risk of slipping.\n\nanything changed?";
+}
+
+function ensureMorningBrief(events, connected) {
+  if (morningBriefDate === todayIso) return;
+  const brief = buildMorningBrief(events, connected);
+  history.push({ role: "assistant", content: brief });
+  morningBriefDate = todayIso;
+  morningBriefSource = connected ? "google calendar · read only" : "seeded simulation";
+  addMessage(brief, "viv");
+  saveMemory();
+  updateDeveloperPanel();
+}
+
+async function loadCalendar() {
+  try {
+    const response = await fetch("/api/calendar/today");
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "calendar unavailable");
+    if (data.connected && Array.isArray(data.events)) {
+      scheduleItems.push(...data.events.map((item) => ({ ...item, source: "google" })));
+      ensureMorningBrief(data.events, true);
+    } else {
+      ensureMorningBrief([], false);
+    }
+  } catch {
+    ensureMorningBrief([], false);
+  }
+  updateDeveloperPanel();
+}
+
+function upsertScheduleItem(item) {
+  const key = `${item.source}:${item.id ?? `${item.date}:${item.start}:${item.title.toLowerCase()}`}`;
+  const existingIndex = scheduleItems.findIndex((entry) => entry._key === key);
+  const stored = { ...item, _key: key };
+  if (existingIndex >= 0) scheduleItems[existingIndex] = stored;
+  else scheduleItems.push(stored);
+}
+
+function captureScheduleItem(interpretation) {
+  if (!interpretation?.shouldAddToPlan || !interpretation.planItemTitle || !interpretation.planItemStart || !interpretation.planItemEnd) return;
+  upsertScheduleItem({
+    id: interpretation.planItemTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    source: "conversation",
+    title: interpretation.planItemTitle,
+    date: resolvePlanDate(interpretation.planItemDate),
+    start: interpretation.planItemStart,
+    end: interpretation.planItemEnd,
+    details: interpretation.planItemDetails ?? null
+  });
+}
+
+function captureProposal(interpretation) {
+  if (!interpretation?.taskOrRequest || !interpretation.proposedStart || !interpretation.proposedEnd) return;
+  upsertScheduleItem({
+    id: interpretation.taskOrRequest.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    source: "proposal",
+    title: interpretation.taskOrRequest,
+    date: resolvePlanDate(interpretation.proposedDate),
+    start: interpretation.proposedStart,
+    end: interpretation.proposedEnd,
+    details: "viv’s proposed time. not confirmed."
+  });
+}
+
+function captureTask(interpretation) {
+  if (!interpretation || !["task", "request"].includes(interpretation.kind) || !interpretation.taskOrRequest) return;
+  if (interpretation.kind === "request" && interpretation.durationMinutes === null && !interpretation.needsClarification) return;
+  const item = {
+    taskOrRequest: interpretation.taskOrRequest,
+    durationMinutes: interpretation.durationMinutes,
+    deadline: interpretation.deadline,
+    needsClarification: interpretation.needsClarification,
+    proposedTime: interpretation.proposedTime
+  };
+  if (pendingPlannerIndex !== null) {
+    plannerItems[pendingPlannerIndex] = item;
+    pendingPlannerIndex = item.needsClarification ? pendingPlannerIndex : null;
+  } else {
+    const normalized = item.taskOrRequest.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const existingIndex = plannerItems.findIndex((entry) => entry.taskOrRequest.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() === normalized);
+    if (existingIndex >= 0) plannerItems[existingIndex] = item;
+    else plannerItems.unshift(item);
+    if (item.needsClarification) pendingPlannerIndex = existingIndex >= 0 ? existingIndex : 0;
+  }
+}
+
+function updateStateFromInterpretation(interpretation) {
+  lastIntent = interpretation.intent ?? ({ task: "new_task", request: "advice_request", context: "personal_context" }[interpretation.kind] ?? "general_conversation");
+  if (interpretation.needsClarification) pendingAction = interpretation.clarificationQuestion ?? "waiting for one detail";
+  else if (interpretation.proposedTime) pendingAction = `proposal: ${interpretation.proposedTime}`;
+  else pendingAction = null;
+  captureTask(interpretation);
+  captureScheduleItem(interpretation);
+  captureProposal(interpretation);
+  saveMemory();
+  updateDeveloperPanel();
 }
 
 function resizeInput() {
@@ -356,7 +260,7 @@ form.addEventListener("submit", async (event) => {
   if (!message || sendButton.disabled) return;
   errorBox.hidden = true;
   addMessage(message, "user");
-  const priorConversation = history.slice(-8);
+  const priorConversation = history.slice(-10);
   history.push({ role: "user", content: message });
   saveMemory();
   input.value = "";
@@ -375,13 +279,10 @@ form.addEventListener("submit", async (event) => {
     thinking.remove();
     addMessage(data.reply, "viv");
     history.push({ role: "assistant", content: data.reply });
-    captureForPlanner(data.interpretation);
-    captureScheduleItem(data.interpretation);
-    captureProposal(data.interpretation);
-    saveMemory();
+    updateStateFromInterpretation(data.interpretation);
   } catch (error) {
     thinking.remove();
-    errorBox.textContent = error.message;
+    errorBox.textContent = error instanceof Error ? error.message : "something got in the way. try that again.";
     errorBox.hidden = false;
   } finally {
     sendButton.disabled = false;
@@ -396,6 +297,24 @@ input.addEventListener("keydown", (event) => {
     form.requestSubmit();
   }
 });
-input.focus();
-restoreMemoryView();
+
+developerToggle.addEventListener("click", () => { updateDeveloperPanel(); developerPanel.showModal(); });
+developerClose.addEventListener("click", () => developerPanel.close());
+developerPanel.addEventListener("click", (event) => { if (event.target === developerPanel) developerPanel.close(); });
+document.addEventListener("keydown", (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "d") {
+    event.preventDefault();
+    if (developerPanel.open) developerPanel.close();
+    else { updateDeveloperPanel(); developerPanel.showModal(); }
+  }
+});
+resetButton.addEventListener("click", () => {
+  if (!window.confirm("reset this local conversation?")) return;
+  localStorage.removeItem(memoryKey);
+  window.location.reload();
+});
+
+restoreConversation();
+updateDeveloperPanel();
 loadCalendar();
+input.focus();
