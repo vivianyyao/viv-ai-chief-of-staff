@@ -13,11 +13,21 @@ demoApp.use(express.static(join(process.cwd(), "public")));
 demoApp.post("/api/chat", async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   if (!message) return res.status(400).json({ error: "tell me what’s on your mind." });
+  const conversation = Array.isArray(req.body?.conversation)
+    ? req.body.conversation.slice(-8).flatMap((entry: unknown) => {
+        if (!entry || typeof entry !== "object") return [];
+        const role = "role" in entry ? entry.role : undefined;
+        const content = "content" in entry ? entry.content : undefined;
+        return (role === "user" || role === "assistant") && typeof content === "string" && content.trim()
+          ? [{ role, content: content.trim().slice(0, 1000) }]
+          : [];
+      })
+    : [];
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
     const usesClaude = Boolean(apiKey && !apiKey.startsWith("your_"));
     const interpret: SmsInterpreter = usesClaude
-      ? (text) => interpretSmsWithClaude(text, { apiKey: apiKey!, model: process.env.ANTHROPIC_MODEL })
+      ? (text) => interpretSmsWithClaude(text, { apiKey: apiKey!, model: process.env.ANTHROPIC_MODEL, conversation })
       : async (text) => interpretSmsLocally(text);
     const result = await processSmsMessage(message, interpret);
     return res.json({ ...result, interpreter: usesClaude ? "claude" : "local" });

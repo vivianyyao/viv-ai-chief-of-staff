@@ -14,31 +14,95 @@
         <div class="avatar" aria-hidden="true">v</div>
         <div><h1>viv</h1><p>your ai chief of staff</p></div>
       </div>
+      <nav class="view-tabs" aria-label="viv views">
+        <button class="view-tab is-active" type="button" data-view="chat" aria-selected="true">chat</button>
+        <button class="view-tab" type="button" data-view="plan" aria-selected="false">plan</button>
+      </nav>
       <div class="presence"><i></i><span>local</span></div>
     </header>
 
-    <section id="conversation" class="conversation" aria-live="polite" aria-label="Conversation with Viv">
-      <div class="day-divider"><span>today</span></div>
-      <article class="message-row viv-row intro-message">
-        <div class="message viv-message">
-          <p>hi. what’s taking up space?</p>
-          <p>send me a task, a loose end, or just how you’re feeling.</p>
+    <section id="chat-view" class="app-view chat-view" aria-label="chat with viv">
+      <section id="conversation" class="conversation" aria-live="polite" aria-label="conversation with viv">
+        <div class="day-divider"><span>today</span></div>
+        <article class="message-row viv-row intro-message">
+          <div class="message viv-message">
+            <p>hi. what’s taking up space?</p>
+            <p>send me a task, a loose end, or just how you’re feeling.</p>
+          </div>
+        </article>
+      </section>
+
+      <p id="error" class="error" role="alert" hidden></p>
+
+      <form id="chat-form" class="composer-wrap">
+        <label class="sr-only" for="message">message viv</label>
+        <div class="composer">
+          <textarea id="message" rows="1" placeholder="text what’s on your mind…" autocomplete="off" spellcheck="true"></textarea>
+          <button id="send-button" type="submit" aria-label="send message">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4"/></svg>
+          </button>
         </div>
-      </article>
+        <p class="local-note">private local preview · nothing will be changed</p>
+      </form>
     </section>
 
-    <p id="error" class="error" role="alert" hidden></p>
+    <section id="plan-view" class="app-view plan-view" aria-label="viv plan" hidden>
+      <header class="plan-heading">
+        <div>
+          <p class="eyebrow">today</p>
+          <h2 id="plan-date">wednesday, july 22</h2>
+          <p>a quiet place for what matters and where it might fit.</p>
+        </div>
+        <span class="preview-badge">preview only</span>
+      </header>
 
-    <form id="chat-form" class="composer-wrap">
-      <label class="sr-only" for="message">message viv</label>
-      <div class="composer">
-        <textarea id="message" rows="1" placeholder="text what’s on your mind…" autocomplete="off" spellcheck="true"></textarea>
-        <button id="send-button" type="submit" aria-label="send message">
-          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4"/></svg>
-        </button>
+      <div class="planner-layout">
+        <section class="schedule-card" aria-labelledby="schedule-title">
+          <header class="card-heading">
+            <div>
+              <p class="eyebrow">your day</p>
+              <h3 id="schedule-title">schedule</h3>
+            </div>
+            <span class="connection-note"><i></i>calendar not connected</span>
+          </header>
+          <div class="timeline" aria-label="day timeline from 8 am to 6 pm">
+            <div class="timeline-empty">
+              <span>your calendar will appear here</span>
+              <small>viv won’t guess what’s already on your day.</small>
+            </div>
+            <div class="time-row"><time>8 am</time><i></i></div>
+            <div class="time-row"><time>9 am</time><i></i></div>
+            <div class="time-row"><time>10 am</time><i></i></div>
+            <div class="time-row"><time>11 am</time><i></i></div>
+            <div class="time-row"><time>12 pm</time><i></i></div>
+            <div class="time-row"><time>1 pm</time><i></i></div>
+            <div class="time-row"><time>2 pm</time><i></i></div>
+            <div class="time-row"><time>3 pm</time><i></i></div>
+            <div class="time-row"><time>4 pm</time><i></i></div>
+            <div class="time-row"><time>5 pm</time><i></i></div>
+            <div class="time-row"><time>6 pm</time><i></i></div>
+          </div>
+        </section>
+
+        <aside class="radar-card" aria-labelledby="radar-title">
+          <header class="card-heading">
+            <div>
+              <p class="eyebrow">captured from chat</p>
+              <h3 id="radar-title">on viv’s radar</h3>
+            </div>
+            <span id="radar-count" class="radar-count">0</span>
+          </header>
+          <div id="radar-list" class="radar-list" aria-live="polite">
+            <div class="radar-empty">
+              <span>nothing here yet.</span>
+              <p>tell viv what’s on your mind and clear tasks will collect here.</p>
+              <button type="button" data-switch-to-chat>go to chat</button>
+            </div>
+          </div>
+          <p class="radar-note">kept only in this browser session.</p>
+        </aside>
       </div>
-      <p class="local-note">private local preview · nothing will be changed</p>
-    </form>
+    </section>
   </main>
   <script src="/app.js"></script>
 </body>

@@ -33,6 +33,45 @@ describe("Viv SMS interpretation", () => {
     expect(writeVivReply(interpretSmsLocally("i’m exhausted"))).toContain("i’m treating that as context, not a task.");
   });
 
+  it("acknowledges schedule context without repeating the task", () => {
+    expect(writeVivReply({
+      kind: "context",
+      taskOrRequest: null,
+      durationMinutes: null,
+      deadline: null,
+      needsClarification: false,
+      clarificationQuestion: null,
+      availabilityProvided: true,
+      proposedTime: null,
+      recommendationReason: null
+    })).toBe("got it.\n\ni’ll keep that in mind while we find the best time.\n\nnothing has been changed.");
+  });
+
+  it("does not pretend to find a calendar slot before calendar access exists", () => {
+    expect(writeVivReply({
+      kind: "request",
+      taskOrRequest: "find the best time slot today for interview prep",
+      durationMinutes: 120,
+      deadline: "before tomorrow at 10:30 am",
+      needsClarification: false,
+      clarificationQuestion: null
+    })).toContain("i’d be guessing at your availability");
+  });
+
+  it("can recommend a block from availability the user supplied", () => {
+    expect(writeVivReply({
+      kind: "request",
+      taskOrRequest: "find a time for interview prep",
+      durationMinutes: 120,
+      deadline: "before tomorrow at 10:30 am",
+      needsClarification: false,
+      clarificationQuestion: null,
+      availabilityProvided: true,
+      proposedTime: "2:20–4:20 pm today",
+      recommendationReason: "it gives you two uninterrupted hours before the dog walk and keeps dinner clear"
+    })).toBe("i’d do 2:20–4:20 pm today.\n\nit gives you two uninterrupted hours before the dog walk and keeps dinner clear\n\nthat’s a proposal based on what you told me. nothing has been changed.");
+  });
+
   it("allows only the exact configured E.164 phone number", () => {
     expect(isAllowedPhone("+14155550123", "+14155550123")).toBe(true);
     expect(isAllowedPhone("+14155550999", "+14155550123")).toBe(false);
