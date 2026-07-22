@@ -10,7 +10,6 @@ const planDate = document.querySelector("#plan-date");
 const radarList = document.querySelector("#radar-list");
 const radarCount = document.querySelector("#radar-count");
 const scheduleLayer = document.querySelector("#schedule-layer");
-const timelineEmpty = document.querySelector("#timeline-empty");
 const eventDialog = document.querySelector("#event-dialog");
 const eventDialogClose = document.querySelector("#event-dialog-close");
 const eventDialogTitle = document.querySelector("#event-dialog-title");
@@ -132,7 +131,6 @@ eventDialog.addEventListener("click", (event) => {
 });
 
 function renderSchedule() {
-  timelineEmpty.hidden = scheduleItems.length > 0;
   scheduleLayer.replaceChildren(...scheduleItems.map((item) => {
     const start = timeToMinutes(item.start);
     const rawEnd = timeToMinutes(item.end);

@@ -83,9 +83,6 @@ textarea::placeholder { color: #aaa69f; }
 .time-row { display: grid; grid-template-columns: 42px 1fr; align-items: start; height: 48px; }
 .time-row time { position: relative; top: -6px; color: #aaa69e; font-size: 9px; text-align: right; padding-right: 10px; }
 .time-row i { height: 1px; background: #ebe7df; }
-.timeline-empty { position: absolute; z-index: 1; top: 50%; left: calc(50% + 20px); display: flex; width: min(300px, 60%); flex-direction: column; align-items: center; padding: 17px 20px; border: 1px dashed #dcd7cd; border-radius: 17px; background: #fffdf9df; text-align: center; transform: translate(-50%, -50%); backdrop-filter: blur(4px); }
-.timeline-empty span { color: #5f5c56; font-size: 12px; }
-.timeline-empty small { margin-top: 5px; color: #aaa69e; font-size: 9px; line-height: 1.45; }
 .radar-count { min-width: 25px; height: 25px; display: grid; place-items: center; border-radius: 9px; background: #f0ede6; color: #88847c; font-size: 10px; }
 .radar-list { padding: 10px; }
 .radar-empty { padding: 37px 16px 40px; text-align: center; }
