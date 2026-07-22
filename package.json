@@ -1,0 +1,32 @@
+{
+  "name": "text-to-timeblock",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo": "npm run build --silent && node dist/src/demo-server.js",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/src/server.js",
+    "build": "tsc",
+    "test": "vitest run",
+    "google:auth": "tsx scripts/google-auth.ts",
+    "twilio:save-token": "bash scripts/save-twilio-token.sh"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.57.0",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "googleapis": "^155.0.0",
+    "luxon": "^3.7.0",
+    "twilio": "^5.8.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/luxon": "^3.6.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
+  }
+}

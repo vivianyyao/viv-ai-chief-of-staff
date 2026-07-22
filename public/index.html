@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f7f8">
+  <title>Viv · Your AI Chief of Staff</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Viv home">
+      <span class="brand-mark">V</span>
+      <span><strong>Viv</strong><small>Your AI Chief of Staff</small></span>
+    </a>
+    <span class="status"><i></i> Ready</span>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="kicker">A clearer way forward</p>
+      <h1>Text what's on your mind.<br><span>We'll handle the rest.</span></h1>
+      <p class="intro">Share the loose end, decision, or task taking up space. Viv will make sense of it and recommend the next move.</p>
+    </section>
+
+    <form id="task-form">
+      <label for="message">What's on your mind?</label>
+      <div class="composer">
+        <input id="message" value="Finish the budget deck, about 90 minutes" autocomplete="off" spellcheck="true">
+        <button id="submit-button" type="submit"><span>Find a time</span><b aria-hidden="true">→</b></button>
+      </div>
+    </form>
+
+    <p id="error" role="alert" hidden></p>
+
+    <section id="thinking" class="thinking card" aria-live="polite" hidden>
+      <div class="thinking-orb"><span></span><span></span><span></span></div>
+      <div><span class="eyebrow">Viv is thinking...</span><p id="thinking-message">Understanding your request...</p></div>
+    </section>
+
+    <section id="results" hidden>
+      <article class="card reasoning-card reveal">
+        <span class="eyebrow">How Viv Thought</span>
+        <h2 id="reasoning-title"></h2>
+        <div id="reasoning"></div>
+      </article>
+
+      <article class="card recommendation-card reveal">
+        <div class="recommendation-header">
+          <span class="eyebrow recommended-label"><i></i> Recommended</span>
+          <div class="confidence"><span>Confidence</span><strong id="confidence">High</strong></div>
+        </div>
+        <h2 id="recommendation-title"></h2>
+        <div class="time-block">
+          <span id="recommendation-day"></span>
+          <strong><span id="recommendation-start"></span> <i>–</i> <span id="recommendation-end"></span></strong>
+        </div>
+        <div class="why">
+          <h3>Why this works</h3>
+          <ul id="recommendation-reasons"></ul>
+        </div>
+        <div class="actions">
+          <button id="accept-button" class="primary-action" type="button">Accept</button>
+          <button id="another-button" class="secondary-action" type="button">Choose another time</button>
+        </div>
+        <p class="preview-note">Preview only — nothing will be changed.</p>
+      </article>
+    </section>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
