@@ -87,7 +87,8 @@ describe("Viv SMS interpretation", () => {
       planItemTitle: "call with danielle jing",
       planItemDate: "today",
       planItemStart: "17:00",
-      planItemEnd: "17:20"
+      planItemEnd: "17:20",
+      planItemDetails: "danielle is a recruiter. scheduled on linkedin. https://meet.example.com/viv"
     })).toBe("added to your local plan.\n\ncall with danielle jing\ntoday, 17:00–17:20\n\nnothing changed outside this preview.");
   });
 

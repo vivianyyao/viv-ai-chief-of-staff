@@ -11,6 +11,12 @@ const radarList = document.querySelector("#radar-list");
 const radarCount = document.querySelector("#radar-count");
 const scheduleLayer = document.querySelector("#schedule-layer");
 const timelineEmpty = document.querySelector("#timeline-empty");
+const eventDialog = document.querySelector("#event-dialog");
+const eventDialogClose = document.querySelector("#event-dialog-close");
+const eventDialogTitle = document.querySelector("#event-dialog-title");
+const eventDialogDate = document.querySelector("#event-dialog-date");
+const eventDialogTime = document.querySelector("#event-dialog-time");
+const eventDialogDetails = document.querySelector("#event-dialog-details");
 const history = [];
 const plannerItems = [];
 const scheduleItems = [];
@@ -88,12 +94,50 @@ function displayTime(value) {
   return `${displayHour}${minute ? `:${String(minute).padStart(2, "0")}` : ""} ${hour >= 12 ? "pm" : "am"}`;
 }
 
+function renderEventDetails(details) {
+  eventDialogDetails.replaceChildren();
+  if (!details?.trim()) {
+    eventDialogDetails.hidden = true;
+    return;
+  }
+  eventDialogDetails.hidden = false;
+  const parts = details.split(/(https?:\/\/[^\s]+)/g);
+  for (const part of parts) {
+    if (/^https?:\/\//.test(part)) {
+      const link = document.createElement("a");
+      link.href = part;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      link.textContent = part;
+      eventDialogDetails.append(link);
+    } else {
+      eventDialogDetails.append(document.createTextNode(part));
+    }
+  }
+}
+
+function openEventDetails(item) {
+  eventDialogTitle.textContent = item.title;
+  eventDialogDate.textContent = item.date ?? "today";
+  eventDialogTime.textContent = `${displayTime(item.start)}–${displayTime(item.end)}`;
+  renderEventDetails(item.details);
+  eventDialog.showModal();
+}
+
+eventDialogClose.addEventListener("click", () => eventDialog.close());
+eventDialog.addEventListener("click", (event) => {
+  const bounds = eventDialog.getBoundingClientRect();
+  const inside = event.clientX >= bounds.left && event.clientX <= bounds.right && event.clientY >= bounds.top && event.clientY <= bounds.bottom;
+  if (!inside) eventDialog.close();
+});
+
 function renderSchedule() {
   timelineEmpty.hidden = scheduleItems.length > 0;
   scheduleLayer.replaceChildren(...scheduleItems.map((item) => {
     const start = timeToMinutes(item.start);
     const end = timeToMinutes(item.end);
-    const block = document.createElement("article");
+    const block = document.createElement("button");
+    block.type = "button";
     block.className = "schedule-block";
     if (start !== null && end !== null) {
       block.style.top = `${Math.max(0, (start - 8 * 60) / 60 * 48)}px`;
@@ -104,6 +148,7 @@ function renderSchedule() {
     const time = document.createElement("span");
     time.textContent = `${displayTime(item.start)}–${displayTime(item.end)}`;
     block.append(title, time);
+    block.addEventListener("click", () => openEventDetails(item));
     return block;
   }));
 }
@@ -114,7 +159,8 @@ function captureScheduleItem(interpretation) {
     title: interpretation.planItemTitle,
     date: interpretation.planItemDate,
     start: interpretation.planItemStart,
-    end: interpretation.planItemEnd
+    end: interpretation.planItemEnd,
+    details: interpretation.planItemDetails
   };
   const key = `${item.date ?? "today"}|${item.start}|${item.title}`.toLowerCase();
   const existingIndex = scheduleItems.findIndex((existing) =>
