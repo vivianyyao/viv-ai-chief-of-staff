@@ -473,8 +473,8 @@ function parseEventContext(details) {
 function serializeEventContext() {
   return [
     ["who", eventEditWho.value.trim()],
-    ["where", eventEditWhere.value.trim()],
     ["what", eventEditWhat.value.trim()],
+    ["where", eventEditWhere.value.trim()],
     ["why", eventEditWhy.value.trim()]
   ].filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`).join("\n") || null;
 }

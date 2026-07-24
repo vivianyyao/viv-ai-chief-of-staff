@@ -58,7 +58,7 @@ describe("Viv SMS interpretation", () => {
       shouldAddToPlan: false,
       needsClarification: true,
       clarificationQuestion: "why?",
-      planItemDetails: "who: ivanna and grace\nwhere: marufuku, japantown\nwhat: dinner"
+      planItemDetails: "who: ivanna and grace\nwhat: dinner\nwhere: marufuku, japantown"
     });
   });
 
@@ -81,7 +81,7 @@ describe("Viv SMS interpretation", () => {
       planItemWhere: "tbd",
       planItemWhat: "craft night",
       planItemWhy: "fun gno",
-      planItemDetails: "who: grace and ivanna\nwhere: tbd\nwhat: craft night\nwhy: fun gno"
+      planItemDetails: "who: grace and ivanna\nwhat: craft night\nwhere: tbd\nwhy: fun gno"
     });
   });
 
@@ -123,7 +123,7 @@ describe("Viv SMS interpretation", () => {
     expect(result).toMatchObject({
       shouldAddToPlan: true,
       planItemWhy: "a fun gno",
-      planItemDetails: "who: ivanna and grace\nwhere: marufuku in japantown\nwhat: dinner\nwhy: a fun gno"
+      planItemDetails: "who: ivanna and grace\nwhat: dinner\nwhere: marufuku in japantown\nwhy: a fun gno"
     });
   });
 

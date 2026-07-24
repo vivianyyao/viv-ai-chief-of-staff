@@ -70,6 +70,18 @@ describe("conversation-first browser experience", () => {
     expect(app).toContain('tab.addEventListener("click", () => switchView(tab.dataset.view))');
   });
 
+  it("orders event context as who, what, where, why", () => {
+    const who = html.indexOf('id="event-edit-who"');
+    const what = html.indexOf('id="event-edit-what"');
+    const where = html.indexOf('id="event-edit-where"');
+    const why = html.indexOf('id="event-edit-why"');
+    expect(who).toBeLessThan(what);
+    expect(what).toBeLessThan(where);
+    expect(where).toBeLessThan(why);
+    expect(app).toContain('["who", eventEditWho.value.trim()]');
+    expect(app).toContain('["what", eventEditWhat.value.trim()]');
+  });
+
   it("lets local schedule blocks move or delete while google stays read only", () => {
     expect(html).toContain('id="event-editor"');
     expect(html).toContain('id="event-edit-date"');

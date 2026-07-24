@@ -133,7 +133,7 @@ export function resolveFatigueSchedulingFollowUp(
 
 const smsTool: Anthropic.Tool = {
   name: "interpret_text",
-  description: "Interpret one text message sent to Viv, an AI chief of staff. Calendar titles must be five words or fewer. For every calendar event, derive four literal detail lines from context: who: ..., where: ..., what: ..., why: ... . Never invent facts. If any genuinely applicable detail is unavailable, set needsClarification true and ask a compact question using the missing labels, such as who? where? why? Combine the answer with conversation context before adding the event. A duration at the start of a follow-up completes the currently pending event. A phrase such as 'we are doing craft night after until 11pm' describes a separate later event; never use 11pm as the pending event's end when its duration already determines the end.",
+  description: "Interpret one text message sent to Viv, an AI chief of staff. Calendar titles must be five words or fewer. For every calendar event, derive four literal detail lines from context in this order: who: ..., what: ..., where: ..., why: ... . Never invent facts. If any genuinely applicable detail is unavailable, set needsClarification true and ask a compact question using the missing labels, such as who? what? where? why? Combine the answer with conversation context before adding the event. A duration at the start of a follow-up completes the currently pending event. A phrase such as 'we are doing craft night after until 11pm' describes a separate later event; never use 11pm as the pending event's end when its duration already determines the end.",
   input_schema: {
     type: "object",
     properties: {
@@ -157,10 +157,10 @@ const smsTool: Anthropic.Tool = {
       planItemStart: { type: ["string", "null"], description: "24-hour local start time in HH:MM format, or null" },
       planItemEnd: { type: ["string", "null"], description: "24-hour local end time in HH:MM format, or null" },
       planItemWho: { type: ["string", "null"], description: "People involved, excluding the user, derived from conversation context or null" },
-      planItemWhere: { type: ["string", "null"], description: "Specific venue, neighborhood, city, address, or meeting link derived from context or null" },
       planItemWhat: { type: ["string", "null"], description: "Plain description of what is happening, derived from context or null" },
+      planItemWhere: { type: ["string", "null"], description: "Specific venue, neighborhood, city, address, or meeting link derived from context or null" },
       planItemWhy: { type: ["string", "null"], description: "Purpose or reason for the event, derived from context or null" },
-      planItemDetails: { type: ["string", "null"], description: "Exactly four lowercase labeled lines: who: ... newline where: ... newline what: ... newline why: ... . Prefill each from conversation context without inventing facts. Preserve URLs exactly. If an applicable value is unknown, ask for it before setting shouldAddToPlan true" }
+      planItemDetails: { type: ["string", "null"], description: "Exactly four lowercase labeled lines: who: ... newline what: ... newline where: ... newline why: ... . Prefill each from conversation context without inventing facts. Preserve URLs exactly. If an applicable value is unknown, ask for it before setting shouldAddToPlan true" }
     },
     required: ["kind", "intent", "taskOrRequest", "radarCategory", "durationMinutes", "deadline", "needsClarification", "clarificationQuestion", "availabilityProvided", "proposedTime", "proposedDate", "proposedStart", "proposedEnd", "recommendationReason", "shouldAddToPlan", "planItemTitle", "planItemDate", "planItemStart", "planItemEnd", "planItemWho", "planItemWhere", "planItemWhat", "planItemWhy", "planItemDetails"],
     additionalProperties: false
@@ -179,8 +179,8 @@ export function prepareEventContext(value: SmsInterpretation): SmsInterpretation
   if (!value.planItemTitle) return value;
   const context = {
     who: value.planItemWho ?? null,
-    where: value.planItemWhere ?? null,
     what: value.planItemWhat ?? value.planItemTitle,
+    where: value.planItemWhere ?? null,
     why: value.planItemWhy ?? null
   };
   const details = Object.entries(context)
