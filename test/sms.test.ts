@@ -127,6 +127,50 @@ describe("Viv SMS interpretation", () => {
     });
   });
 
+  it("fills several missing event details from one natural follow-up", () => {
+    const result = prepareEventContext(deriveEventContextFromMessage(mergePendingEvent({
+      kind: "context", taskOrRequest: null, durationMinutes: null,
+      deadline: null, needsClarification: false, clarificationQuestion: null,
+      shouldAddToPlan: false, planItemTitle: null, planItemDate: null,
+      planItemStart: null, planItemEnd: null,
+      planItemWho: null, planItemWhere: null, planItemWhat: null,
+      planItemWhy: null, planItemDetails: null
+    }, {
+      title: "craft night", date: "today", start: "21:00", end: "23:00",
+      who: null, where: null, what: "making magnets", why: null, details: null
+    }, "ivanna and grace, at grace’s apartment, for a fun craft night!"),
+    "ivanna and grace, at grace’s apartment, for a fun craft night!"));
+    expect(result).toMatchObject({
+      shouldAddToPlan: true,
+      needsClarification: false,
+      planItemWho: "ivanna and grace",
+      planItemWhat: "making magnets",
+      planItemWhere: "grace’s apartment",
+      planItemWhy: "a fun craft night",
+      planItemDetails: "who: ivanna and grace\nwhat: making magnets\nwhere: grace’s apartment\nwhy: a fun craft night"
+    });
+  });
+
+  it("accepts a short who-only answer without asking who again", () => {
+    const result = prepareEventContext(deriveEventContextFromMessage(mergePendingEvent({
+      kind: "context", taskOrRequest: null, durationMinutes: null,
+      deadline: null, needsClarification: false, clarificationQuestion: null,
+      shouldAddToPlan: false, planItemTitle: null, planItemDate: null,
+      planItemStart: null, planItemEnd: null,
+      planItemWho: null, planItemWhere: null, planItemWhat: null,
+      planItemWhy: null, planItemDetails: null
+    }, {
+      title: "craft night", date: "today", start: "21:00", end: "23:00",
+      who: null, where: "grace’s apartment", what: "making magnets",
+      why: "a fun craft night", details: null
+    }, "with ivanna and grace"), "with ivanna and grace"));
+    expect(result).toMatchObject({
+      shouldAddToPlan: true,
+      needsClarification: false,
+      planItemWho: "ivanna and grace"
+    });
+  });
+
   it("attaches a duration-only reply to the one radar task waiting for it", () => {
     expect(applyRadarMemory({
       kind: "context", taskOrRequest: null, durationMinutes: 60, deadline: null,

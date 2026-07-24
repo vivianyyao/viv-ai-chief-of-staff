@@ -235,14 +235,16 @@ export function selectPendingEvent(message: string, pending: PendingPlanItem | n
 
 export function deriveEventContextFromMessage(value: SmsInterpretation, message: string): SmsInterpretation {
   if (!value.planItemTitle) return value;
-  const whoMatch = message.match(/\bwith\s+(.+?)\s+(?:at|in)\s+/i);
-  const whereMatch = message.match(/\b(?:at|in)\s+(.+?)\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/i);
+  const whoMatch = message.match(/\bwith\s+(.+?)(?=\s+(?:at|in|for|because|to)\b|[,.!?]|$)/i)
+    ?? message.match(/^\s*([^,]+?),\s*(?=(?:at|in|for|because|to)\b)/i);
+  const whereMatch = message.match(/\b(?:at|in)\s+(.+?)(?=\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|,\s*(?:for|because|to)\b|[.!?]|$)/i);
   const whatMatch = message.match(/^\s*(.+?)\s+(?:with\s+|at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm))/i);
   const whyMatch = message.match(/(?:^|[.!?]\s*|\b)(?:for|because|so that|to)\s+(.+?)[.!?]*$/i);
+  const where = whereMatch?.[1]?.trim();
   return {
     ...value,
     planItemWho: value.planItemWho ?? whoMatch?.[1]?.trim() ?? null,
-    planItemWhere: value.planItemWhere ?? whereMatch?.[1]?.trim() ?? null,
+    planItemWhere: value.planItemWhere ?? (where && !/^\d{1,2}(?::\d{2})?\s*(?:am|pm)$/i.test(where) ? where : null),
     planItemWhat: value.planItemWhat ?? whatMatch?.[1]?.trim() ?? value.planItemTitle,
     planItemWhy: value.planItemWhy ?? whyMatch?.[1]?.trim() ?? null
   };
