@@ -136,6 +136,7 @@ body.showing-plan .app-shell { padding-bottom: 0; }
 .event-dialog-details a { color: #476d57; text-underline-offset: 3px; }
 .event-editor { margin-top: 22px; padding-top: 18px; border-top: 1px solid #e5e1d9; }
 .event-editor-grid { display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 10px; }
+.event-editor-grid .event-title-field { grid-column: 1 / -1; }
 .event-editor label { display: grid; gap: 6px; color: #8a867e; font-size: 10px; }
 .event-editor input { min-width: 0; padding: 10px; border: 1px solid #dcd7ce; border-radius: 10px; background: #fff; color: var(--ink); font: inherit; font-size: 12px; }
 .event-editor input:focus { outline: 2px solid rgba(111,169,134,.2); border-color: #83aa91; }
@@ -223,7 +224,7 @@ body.showing-plan .app-shell { padding-bottom: 0; }
   .planner-layout { grid-template-columns: 1fr; }
   .radar-card { grid-row: 1; }
   .event-editor-grid { grid-template-columns: 1fr 1fr; }
-  .event-editor-grid label:first-child { grid-column: 1 / -1; }
+  .event-editor-grid label:nth-child(-n+2) { grid-column: 1 / -1; }
   .developer-summary { grid-template-columns: 1fr; }
 }
 

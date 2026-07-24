@@ -136,7 +136,7 @@ const smsTool: Anthropic.Tool = {
       proposedEnd: { type: ["string", "null"], description: "24-hour local end time for the proposed block in HH:MM format, or null" },
       recommendationReason: { type: ["string", "null"], description: "One calm lowercase sentence explaining why the proposed block fits, or null" },
       shouldAddToPlan: { type: "boolean", description: "True when the user states a definite existing commitment with enough timing detail for the local plan, or explicitly asks to add one" },
-      planItemTitle: { type: ["string", "null"], description: "Short lowercase commitment title for the local plan, or null" },
+      planItemTitle: { type: ["string", "null"], description: "Very short lowercase calendar label with only the subject and essential people, or null. Never include the date, time, venue, city, or address; put those in their dedicated fields or planItemDetails" },
       planItemDate: { type: ["string", "null"], description: "User-facing date such as today or tomorrow, or null" },
       planItemStart: { type: ["string", "null"], description: "24-hour local start time in HH:MM format, or null" },
       planItemEnd: { type: ["string", "null"], description: "24-hour local end time in HH:MM format, or null" },

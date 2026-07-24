@@ -22,6 +22,7 @@ const eventDialogDate = document.querySelector("#event-dialog-date");
 const eventDialogTime = document.querySelector("#event-dialog-time");
 const eventDialogDetails = document.querySelector("#event-dialog-details");
 const eventEditor = document.querySelector("#event-editor");
+const eventEditTitle = document.querySelector("#event-edit-title");
 const eventEditDate = document.querySelector("#event-edit-date");
 const eventEditStart = document.querySelector("#event-edit-start");
 const eventEditEnd = document.querySelector("#event-edit-end");
@@ -467,6 +468,7 @@ function openEventDetails(item) {
   eventEditor.hidden = !editable;
   eventReadonlyNote.hidden = editable;
   if (editable) {
+    eventEditTitle.value = item.title;
     eventEditDate.value = resolvedDate;
     eventEditStart.value = item.start;
     eventEditEnd.value = item.end;
@@ -491,6 +493,12 @@ eventEditor.addEventListener("submit", (event) => {
   if (!isEditableScheduleItem(editingScheduleItem)) return;
   const start = timeToMinutes(eventEditStart.value);
   const end = timeToMinutes(eventEditEnd.value);
+  const title = eventEditTitle.value.trim();
+  if (!title) {
+    eventEditorError.textContent = "give this a short name.";
+    eventEditorError.hidden = false;
+    return;
+  }
   if (!eventEditDate.value || start === null || end === null || end <= start) {
     eventEditorError.textContent = "end time needs to be after start time.";
     eventEditorError.hidden = false;
@@ -499,10 +507,13 @@ eventEditor.addEventListener("submit", (event) => {
   const key = editingScheduleItem._key ?? scheduleIdentity(editingScheduleItem);
   const stored = scheduleItems.find((item) => item._key === key);
   if (!stored) return;
+  const previousTitle = stored.title;
+  stored.title = title;
   stored.date = eventEditDate.value;
   stored.start = eventEditStart.value;
   stored.end = eventEditEnd.value;
   selectedPlanDate = stored.date;
+  setPlannerConfirmation(previousTitle, false);
   setPlannerConfirmation(stored.title, stored.source === "confirmed");
   reconcilePlannerWithSchedule();
   renderPlanHeading();

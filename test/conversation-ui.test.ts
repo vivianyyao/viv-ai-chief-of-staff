@@ -110,6 +110,13 @@ describe("conversation-first browser experience", () => {
     expect(css).toContain(".radar-item-controls");
   });
 
+  it("lets local event names be shortened in the editor", () => {
+    expect(html).toContain('id="event-edit-title"');
+    expect(app).toContain("eventEditTitle.value = item.title");
+    expect(app).toContain("stored.title = title");
+    expect(css).toContain(".event-title-field");
+  });
+
   it("persists the thread and sends only one morning brief per day", () => {
     expect(app).toContain('const memoryKey = "viv-local-memory-v1"');
     expect(app).toContain("morningBriefDate === todayIso");
