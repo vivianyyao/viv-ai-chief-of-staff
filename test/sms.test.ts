@@ -109,6 +109,24 @@ describe("Viv SMS interpretation", () => {
     })).toBe("got it.\n\ni’ll keep that in mind while we find the best time.\n\nnothing has been changed.");
   });
 
+  it("asks for a missing commitment end time before treating it as context", () => {
+    expect(writeVivReply({
+      kind: "context",
+      taskOrRequest: null,
+      durationMinutes: null,
+      deadline: null,
+      needsClarification: true,
+      clarificationQuestion: "what time does dinner end?",
+      availabilityProvided: true,
+      shouldAddToPlan: false,
+      planItemTitle: "dinner with grace and ivanna",
+      planItemDate: "today",
+      planItemStart: "19:00",
+      planItemEnd: null,
+      planItemDetails: "marufuku japantown"
+    })).toBe("got it.\n\nwhat time does dinner end?");
+  });
+
   it("asks for the missing schedule context instead of inventing a slot", () => {
     expect(writeVivReply({
       kind: "request",

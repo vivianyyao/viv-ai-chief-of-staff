@@ -32,6 +32,9 @@ export function writeVivReply(value: SmsInterpretation): string {
     const date = value.planItemDate ? `${value.planItemDate}\n` : "";
     return `got it.\n\n${value.planItemTitle}\n${date}${value.planItemStart}–${value.planItemEnd}\n\nadded.\n\ni’ll plan around that.`;
   }
+  if (value.needsClarification) {
+    return `got it.\n\n${value.clarificationQuestion ?? "what detail should i keep in mind?"}`;
+  }
   if (value.kind === "context") {
     if (value.availabilityProvided) {
       return "got it.\n\ni’ll keep that in mind while we find the best time.\n\nnothing has been changed.";
@@ -46,9 +49,6 @@ export function writeVivReply(value: SmsInterpretation): string {
   }
   if (value.taskOrRequest && value.radarCategory === "someday") {
     return `noted.\n\n${value.taskOrRequest}\n\ni’ll keep that under someday.`;
-  }
-  if (value.needsClarification) {
-    return `got it.\n\n${value.clarificationQuestion ?? "what detail should i keep in mind?"}`;
   }
   if (value.kind === "request" && (value.intent === "scheduling_request" || value.proposedTime || /\b(find|choose|pick|schedule|time slot|when)\b/i.test(value.taskOrRequest ?? ""))) {
     if (value.proposedTime) {
