@@ -5,6 +5,7 @@ export const smsInterpretationSchema = z.object({
   kind: z.enum(["task", "request", "context"]),
   intent: z.enum(["new_task", "update", "personal_context", "scheduling_request", "advice_request", "clarification_answer", "confirmation", "rejection", "general_conversation"]).optional(),
   taskOrRequest: z.string().trim().min(2).max(160).nullable(),
+  radarCategory: z.enum(["radar", "waiting", "thinking", "someday"]).nullable().optional(),
   durationMinutes: z.number().int().min(5).max(480).nullable(),
   deadline: z.string().trim().min(2).max(80).nullable(),
   needsClarification: z.boolean(),
@@ -42,10 +43,77 @@ export type LocalPlanItem = {
 
 export type RadarItem = {
   taskOrRequest: string;
+  radarCategory?: "radar" | "waiting" | "thinking" | "someday" | null;
   durationMinutes: number | null;
   deadline: string | null;
   needsClarification: boolean;
 };
+
+function minutesToTime(totalMinutes: number): string {
+  return `${String(Math.floor(totalMinutes / 60)).padStart(2, "0")}:${String(totalMinutes % 60).padStart(2, "0")}`;
+}
+
+function friendlyTime(value: string): string {
+  const [hours, minutes] = value.split(":").map(Number);
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+export function resolveFatigueSchedulingFollowUp(
+  message: string,
+  radar: RadarItem[] = [],
+  plan: LocalPlanItem[] = [],
+  now = new Date()
+): SmsInterpretation | null {
+  const normalized = message.toLowerCase().replace(/[’]/g, "'");
+  if (!/\b(exhausted|tired|wiped|drained|burnt out|overwhelmed)\b/.test(normalized)
+    || !/\b(when|what time|schedule|fit|do it)\b/.test(normalized)
+    || !/\b(it|that|this)\b/.test(normalized)) return null;
+
+  const task = radar.find((item) => item.durationMinutes !== null) ?? radar[0];
+  if (!task) return null;
+  if (task.durationMinutes === null) {
+    return {
+      kind: "request", intent: "scheduling_request", taskOrRequest: task.taskOrRequest,
+      durationMinutes: null, deadline: task.deadline, needsClarification: true,
+      clarificationQuestion: "how long should i set aside?", availabilityProvided: true,
+      proposedTime: null, proposedDate: null, proposedStart: null, proposedEnd: null,
+      recommendationReason: null, shouldAddToPlan: false, planItemTitle: null,
+      planItemDate: null, planItemStart: null, planItemEnd: null, planItemDetails: null
+    };
+  }
+  if (/\btoday\b/i.test(task.deadline ?? "")) return null;
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowIso = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+  const occupied = plan.filter((item) => item.date === "tomorrow" || item.date === tomorrowIso);
+  const duration = task.durationMinutes;
+  let startMinutes = 9 * 60;
+  while (startMinutes + duration <= 20 * 60) {
+    const endMinutes = startMinutes + duration;
+    const overlaps = occupied.some((item) => {
+      const [startHour, startMinute] = item.start.split(":").map(Number);
+      const [endHour, endMinute] = item.end.split(":").map(Number);
+      return startMinutes < endHour! * 60 + endMinute! && endMinutes > startHour! * 60 + startMinute!;
+    });
+    if (!overlaps) break;
+    startMinutes += 30;
+  }
+  if (startMinutes + duration > 20 * 60) return null;
+
+  const proposedStart = minutesToTime(startMinutes);
+  const proposedEnd = minutesToTime(startMinutes + duration);
+  return {
+    kind: "request", intent: "scheduling_request", taskOrRequest: task.taskOrRequest,
+    durationMinutes: duration, deadline: task.deadline, needsClarification: false,
+    clarificationQuestion: null, availabilityProvided: true,
+    proposedTime: `tomorrow ${friendlyTime(proposedStart)}–${friendlyTime(proposedEnd)}`,
+    proposedDate: "tomorrow", proposedStart, proposedEnd,
+    recommendationReason: `you sound done for tonight, so this protects your energy and still gets it finished${task.deadline ? ` before ${task.deadline}` : ""}`,
+    shouldAddToPlan: false, planItemTitle: null, planItemDate: null,
+    planItemStart: null, planItemEnd: null, planItemDetails: null
+  };
+}
 
 const smsTool: Anthropic.Tool = {
   name: "interpret_text",
@@ -56,6 +124,7 @@ const smsTool: Anthropic.Tool = {
       kind: { type: "string", enum: ["task", "request", "context"] },
       intent: { type: "string", enum: ["new_task", "update", "personal_context", "scheduling_request", "advice_request", "clarification_answer", "confirmation", "rejection", "general_conversation"], description: "Invisible internal classification for the newest message" },
       taskOrRequest: { type: ["string", "null"], description: "Concise lowercase task or request, or null for context" },
+      radarCategory: { type: ["string", "null"], enum: ["radar", "waiting", "thinking", "someday", null], description: "Use radar for active tasks, waiting for dependencies or replies, thinking for tentative ideas or purchases, someday for distant aspirations, and null for context" },
       durationMinutes: { type: ["integer", "null"], minimum: 5, maximum: 480 },
       deadline: { type: ["string", "null"], description: "Concise user-facing deadline such as tomorrow or friday, or null" },
       needsClarification: { type: "boolean" },
@@ -73,7 +142,7 @@ const smsTool: Anthropic.Tool = {
       planItemEnd: { type: ["string", "null"], description: "24-hour local end time in HH:MM format, or null" },
       planItemDetails: { type: ["string", "null"], description: "Only useful extra context the user supplied beyond title, date, and time. Preserve URLs exactly. Null when there is no extra context" }
     },
-    required: ["kind", "intent", "taskOrRequest", "durationMinutes", "deadline", "needsClarification", "clarificationQuestion", "availabilityProvided", "proposedTime", "proposedDate", "proposedStart", "proposedEnd", "recommendationReason", "shouldAddToPlan", "planItemTitle", "planItemDate", "planItemStart", "planItemEnd", "planItemDetails"],
+    required: ["kind", "intent", "taskOrRequest", "radarCategory", "durationMinutes", "deadline", "needsClarification", "clarificationQuestion", "availabilityProvided", "proposedTime", "proposedDate", "proposedStart", "proposedEnd", "recommendationReason", "shouldAddToPlan", "planItemTitle", "planItemDate", "planItemStart", "planItemEnd", "planItemDetails"],
     additionalProperties: false
   }
 };
@@ -133,7 +202,7 @@ export async function interpretSmsWithClaude(message: string, options: {
   const response = await client.messages.create({
     model: options.model ?? "claude-sonnet-4-5",
     max_tokens: 400,
-    system: `You interpret texts for Viv, a calm AI chief of staff. Always call interpret_text once. Use lowercase throughout. A clear action is a task. A question or ask is a request. A feeling or life update without an action is context. Capture a duration only when the user explicitly states one; never guess how long a task takes. Distinguish the duration of an event from the duration of a task preparing for that event: "prep for a 30-minute interview" does not mean the prep takes 30 minutes. Capture the task deadline only when stated. For preparation, an event start is the deadline: "prep for an interview tomorrow at 10:30" means the task is due before tomorrow at 10:30. If an actionable task has no duration, set needsClarification true and ask exactly: how long should i set aside? When conversation history is provided, use relevant earlier details, but classify the newest message by what it contributes. A message that both describes a task and asks when to do it is a scheduling request, not merely a task. Use its stated duration and deadline to propose a time when enough schedule context exists. If the newest message only supplies a calendar commitment, busy time, or free time for an existing scheduling conversation, classify it as context, set taskOrRequest null, set availabilityProvided true, and do not repeat the earlier task. Extract a described commitment into planItemTitle, planItemDate, planItemStart, and planItemEnd when those details are known. Put only useful context beyond the subject, date, and time into planItemDetails—for example who someone is, how it was arranged, preparation notes, location, or a meeting URL. Preserve URLs exactly. Set planItemDetails null when no extra context was supplied. Set shouldAddToPlan true when the user states a definite existing commitment with a date, start, and end, because the plan is only a reversible local preview. Also set it true when a follow-up says to add it, put it, or place it on the plan, using earlier commitment details and details. Do not add tentative possibilities, preferences, vague availability, or tasks without a chosen time. A request to find, choose, or schedule a time is a request, not a new task; do not turn the requested planning day into the underlying task's deadline. User-described commitments, free time, and the browser's local plan are usable availability even without Google Calendar. For a scheduling request with enough availability and a known task duration, choose one specific uninterrupted block, set proposedTime, and explain the key tradeoff naturally in recommendationReason. Use only the schedule the user supplied, never claim to have checked Google Calendar, and never claim anything was changed outside the local preview. If availability is insufficient, leave proposedTime and recommendationReason null. Current local date and time: ${new Intl.DateTimeFormat("en-US", { dateStyle: "full", timeStyle: "short", timeZone: process.env.TIME_ZONE ?? "America/Los_Angeles" }).format(new Date())}. For every scheduling request, taskOrRequest must contain only the underlying actionable task, such as \"prep for brex interview\"—never phrases like \"find a time,\" \"when should i,\" or \"schedule.\" When proposing a block, always set proposedDate, proposedStart, and proposedEnd in addition to proposedTime. A short duration-only reply must complete the active radar task that needs clarification; it is not context. A proposed block in the local plan is tentative but occupied for future recommendations, so never overlap it. Do not expose hidden chain-of-thought.${localPlan}${radar}`,
+    system: `You interpret texts for Viv, a calm AI chief of staff. Always call interpret_text once. Use lowercase throughout. A clear action is a task. A question or ask is a request. A feeling or life update without an action is context. A message can combine a feeling with a scheduling request. After discussing a task, "i\'m exhausted tonight. when should i do it?" is a scheduling request for that remembered task: resolve "it" from the conversation or radar, preserve its duration and deadline, avoid tonight, and recommend a later block before the deadline. Never answer that pattern by merely repeating the task. Capture a duration only when the user explicitly states one; never guess how long a task takes. Distinguish the duration of an event from the duration of a task preparing for that event: "prep for a 30-minute interview" does not mean the prep takes 30 minutes. Capture the task deadline only when stated. For preparation, an event start is the deadline: "prep for an interview tomorrow at 10:30" means the task is due before tomorrow at 10:30. If an actionable task has no duration, set needsClarification true and ask exactly: how long should i set aside? When conversation history is provided, use relevant earlier details, but classify the newest message by what it contributes. A message that both describes a task and asks when to do it is a scheduling request, not merely a task. Use its stated duration and deadline to propose a time when enough schedule context exists. If the newest message only supplies a calendar commitment, busy time, or free time for an existing scheduling conversation, classify it as context, set taskOrRequest null, set availabilityProvided true, and do not repeat the earlier task. Extract a described commitment into planItemTitle, planItemDate, planItemStart, and planItemEnd when those details are known. Put only useful context beyond the subject, date, and time into planItemDetails—for example who someone is, how it was arranged, preparation notes, location, or a meeting URL. Preserve URLs exactly. Set planItemDetails null when no extra context was supplied. Set shouldAddToPlan true when the user states a definite existing commitment with a date, start, and end, because the plan is only a reversible local preview. Also set it true when a follow-up says to add it, put it, or place it on the plan, using earlier commitment details and details. Do not add tentative possibilities, preferences, vague availability, or tasks without a chosen time. A request to find, choose, or schedule a time is a request, not a new task; do not turn the requested planning day into the underlying task's deadline. User-described commitments, free time, and the browser's local plan are usable availability even without Google Calendar. For a scheduling request with enough availability and a known task duration, choose one specific uninterrupted block, set proposedTime, and explain the key tradeoff naturally in recommendationReason. Use only the schedule the user supplied, never claim to have checked Google Calendar, and never claim anything was changed outside the local preview. If availability is insufficient, leave proposedTime and recommendationReason null. Current local date and time: ${new Intl.DateTimeFormat("en-US", { dateStyle: "full", timeStyle: "short", timeZone: process.env.TIME_ZONE ?? "America/Los_Angeles" }).format(new Date())}. For every scheduling request, taskOrRequest must contain only the underlying actionable task, such as \"prep for brex interview\"—never phrases like \"find a time,\" \"when should i,\" or \"schedule.\" When proposing a block, always set proposedDate, proposedStart, and proposedEnd in addition to proposedTime. A short duration-only reply must complete the active radar task that needs clarification; it is not context. A proposed block in the local plan is tentative but occupied for future recommendations, so never overlap it. Do not expose hidden chain-of-thought.${localPlan}${radar}`,
     messages: [...(options.conversation ?? []), { role: "user", content: message }],
     tools: [smsTool],
     tool_choice: { type: "tool", name: "interpret_text" }
@@ -155,12 +224,22 @@ export function interpretSmsLocally(message: string): SmsInterpretation {
   const taskOrRequest = normalized
     .replace(/\b(?:probably|about|around)?\s*\d+(?:\.\d+)?\s*(?:minutes?|mins?|hours?)\b/g, "")
     .replace(/\b(?:sometime\s+)?(?:today|tomorrow|this week|next week|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/g, "")
+    .replace(/^(?:i\s+)?(?:should\s+probably|should|need to|have to|want to)\s+/, "")
+    .replace(/\bsometime\b/g, "")
     .replace(/\s+/g, " ").replace(/[,. ]+$/, "").trim();
-  const needsClarification = durationMinutes === null;
+  const radarCategory = /\b(waiting|reply from|hear back|response from)\b/.test(normalized)
+    ? "waiting"
+    : /\b(someday|one day|trip to|travel to|japan trip)\b/.test(normalized)
+      ? "someday"
+      : /\b(thinking about|considering|maybe buy|buy passport photos)\b/.test(normalized)
+        ? "thinking"
+        : "radar";
+  const needsClarification = durationMinutes === null && radarCategory === "radar";
   return {
     kind: "task",
     intent: durationMinutes !== null && /^\s*\d/.test(normalized) ? "clarification_answer" : "new_task",
     taskOrRequest,
+    radarCategory,
     durationMinutes,
     deadline: deadlineMatch?.[1] ?? null,
     needsClarification,

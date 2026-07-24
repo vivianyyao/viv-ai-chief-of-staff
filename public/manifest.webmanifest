@@ -1,0 +1,25 @@
+{
+  "name": "viv · your ai chief of staff",
+  "short_name": "viv",
+  "description": "a quiet place for what’s on your mind and what needs a home.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f0e8",
+  "theme_color": "#f4f0e8",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/viv-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/viv-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

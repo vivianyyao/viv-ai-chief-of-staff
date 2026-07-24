@@ -1,9 +1,35 @@
 import { DateTime } from "luxon";
 import { describe, expect, it } from "vitest";
 import { createDemoPlan } from "../src/demo.js";
-import { buildScheduleReply, normalizeLocalPlan, normalizeRadar } from "../src/demo-server.js";
+import {
+  buildScheduleReply,
+  calendarDayRange,
+  createSessionToken,
+  getAccessConfig,
+  isValidSessionToken,
+  normalizeLocalPlan,
+  normalizeRadar,
+  safeEqual
+} from "../src/demo-server.js";
 
 describe("Viv local experience", () => {
+  it("protects hosted Viv with a private password session", () => {
+    const now = Date.parse("2026-07-24T12:00:00Z");
+    const token = createSessionToken("private-session-secret", now + 60_000);
+    expect(safeEqual("correct horse", "correct horse")).toBe(true);
+    expect(safeEqual("correct horse", "wrong horse")).toBe(false);
+    expect(isValidSessionToken(token, "private-session-secret", now)).toBe(true);
+    expect(isValidSessionToken(token, "wrong-secret", now)).toBe(false);
+    expect(isValidSessionToken(token, "private-session-secret", now + 60_001)).toBe(false);
+    expect(getAccessConfig({ VIV_ACCESS_PASSWORD: "a-long-password", VIV_SESSION_SECRET: "a-long-secret" }).enabled).toBe(true);
+    expect(getAccessConfig({ VIV_ACCESS_PASSWORD: "a-long-password" }).misconfigured).toBe(true);
+  });
+
+  it("builds the google calendar window for the day being viewed", () => {
+    expect(calendarDayRange("2026-07-23", "America/Los_Angeles")?.date).toBe("2026-07-23");
+    expect(calendarDayRange("2026-07-23", "America/Los_Angeles")?.timeMin).toContain("2026-07-23T00:00:00.000-07:00");
+    expect(calendarDayRange("not-a-date", "America/Los_Angeles")).toBeNull();
+  });
   it("safely carries visible plan items into Viv's reasoning", () => {
     expect(normalizeLocalPlan([
       { title: "call with danielle", date: "today", start: "17:00", end: "17:20", details: "recruiter" },
@@ -25,7 +51,7 @@ describe("Viv local experience", () => {
     expect(buildScheduleReply([
       { title: "badminton", date: "today", start: "19:30", end: "22:00", details: null },
       { title: "call with danielle", date: "today", start: "17:00", end: "17:20", details: "recruiter" }
-    ])).toBe("here’s what i have for today:\n\n5:00 pm–5:20 pm\ncall with danielle\n\n7:30 pm–10:00 pm\nbadminton");
+    ])).toBe("here’s what i have for today:\n\n17:00–17:20\ncall with danielle\n\n19:30–22:00\nbadminton");
   });
 
   it("interprets a task and proposes a non-conflicting block", () => {

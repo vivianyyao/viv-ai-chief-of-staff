@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyRadarMemory, interpretSmsLocally, validateSmsInterpretation } from "../src/sms-interpreter.js";
+import { applyRadarMemory, interpretSmsLocally, resolveFatigueSchedulingFollowUp, validateSmsInterpretation } from "../src/sms-interpreter.js";
 import { isAllowedPhone, processSmsMessage, writeVivReply } from "../src/sms-service.js";
 
 describe("Viv SMS interpretation", () => {
@@ -41,6 +41,20 @@ describe("Viv SMS interpretation", () => {
     }])).toMatchObject({ durationMinutes: 60, needsClarification: false, clarificationQuestion: null });
   });
 
+  it("resolves an exhausted scheduling follow-up back to the remembered task", () => {
+    const result = resolveFatigueSchedulingFollowUp("i’m exhausted tonight. when should i do it?", [{
+      taskOrRequest: "finish my application", durationMinutes: 120,
+      deadline: "friday", needsClarification: false
+    }], [], new Date(2026, 6, 22, 16));
+    expect(result).toMatchObject({
+      kind: "request", intent: "scheduling_request",
+      taskOrRequest: "finish my application", durationMinutes: 120,
+      deadline: "friday", proposedDate: "tomorrow",
+      proposedStart: "09:00", proposedEnd: "11:00"
+    });
+    expect(writeVivReply(result!)).toContain("you sound done for tonight");
+  });
+
   it("rejects clarification without a question", () => {
     expect(() => validateSmsInterpretation({
       kind: "task", taskOrRequest: "call mom", durationMinutes: null,
@@ -58,6 +72,21 @@ describe("Viv SMS interpretation", () => {
   it("asks one natural clarification question", () => {
     const result = interpretSmsLocally("call my mom sometime this week");
     expect(writeVivReply(result)).toBe("got it.\n\nhow long should i set aside?");
+  });
+
+  it("captures a hedged personal action on the active radar", () => {
+    expect(interpretSmsLocally("i should probably call grandma sometime")).toMatchObject({
+      kind: "task",
+      taskOrRequest: "call grandma",
+      radarCategory: "radar",
+      needsClarification: true
+    });
+  });
+
+  it("sorts loose thoughts into quiet radar categories", () => {
+    expect(interpretSmsLocally("waiting on reply from danielle").radarCategory).toBe("waiting");
+    expect(interpretSmsLocally("buy passport photos").radarCategory).toBe("thinking");
+    expect(interpretSmsLocally("japan trip someday").radarCategory).toBe("someday");
   });
 
   it("treats feelings as context", () => {
@@ -102,7 +131,7 @@ describe("Viv SMS interpretation", () => {
       availabilityProvided: true,
       proposedTime: "2:20–4:20 pm today",
       recommendationReason: "it gives you two uninterrupted hours before the dog walk and keeps dinner clear"
-    })).toBe("i’d do 2:20–4:20 pm today.\n\nit gives you two uninterrupted hours before the dog walk and keeps dinner clear\n\nthat’s a proposal based on what you told me. nothing has been changed.");
+    })).toBe("i’d do 14:20–16:20 today.\n\nit gives you two uninterrupted hours before the dog walk and keeps dinner clear\n\nthat’s a proposal based on what you told me. nothing has been changed.");
   });
 
   it("uses a recommendation produced from the local plan", () => {
@@ -116,7 +145,7 @@ describe("Viv SMS interpretation", () => {
       availabilityProvided: false,
       proposedTime: "3:30–4:30 pm today",
       recommendationReason: "it gives you an uninterrupted hour before your 5:00 pm call"
-    })).toContain("i’d do 3:30–4:30 pm today");
+    })).toContain("i’d do 15:30–16:30 today");
   });
 
   it("confirms a commitment added only to the local plan", () => {
@@ -136,7 +165,7 @@ describe("Viv SMS interpretation", () => {
       planItemStart: "17:00",
       planItemEnd: "17:20",
       planItemDetails: "danielle is a recruiter. scheduled on linkedin. https://meet.example.com/viv"
-    })).toBe("i’ll keep this in mind here.\n\ncall with danielle jing\ntoday, 17:00–17:20\n\nnothing was changed outside this conversation.");
+    })).toBe("got it.\n\ncall with danielle jing\ntoday\n17:00–17:20\n\nadded.\n\ni’ll plan around that.");
   });
 
   it("allows only the exact configured E.164 phone number", () => {
