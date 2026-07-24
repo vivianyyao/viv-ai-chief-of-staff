@@ -18,6 +18,17 @@ describe("Viv SMS interpretation", () => {
     }).proposedStart).toBe("15:15");
   });
 
+  it("keeps generated calendar titles to five words", () => {
+    expect(validateSmsInterpretation({
+      kind: "context", taskOrRequest: null, durationMinutes: null,
+      deadline: null, needsClarification: false, clarificationQuestion: null,
+      shouldAddToPlan: true,
+      planItemTitle: "dinner in sf with grace and ivanna",
+      planItemDate: "today", planItemStart: "19:00", planItemEnd: "21:00",
+      planItemDetails: "who: grace and ivanna\nwhere: marufuku japantown\nwhat: dinner"
+    }).planItemTitle).toBe("dinner in sf with grace");
+  });
+
   it("attaches a duration-only reply to the one radar task waiting for it", () => {
     expect(applyRadarMemory({
       kind: "context", taskOrRequest: null, durationMinutes: 60, deadline: null,

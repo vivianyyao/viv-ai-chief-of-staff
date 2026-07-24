@@ -112,9 +112,12 @@ describe("conversation-first browser experience", () => {
 
   it("lets local event names be shortened in the editor", () => {
     expect(html).toContain('id="event-edit-title"');
+    expect(html).toContain('id="event-edit-details"');
     expect(app).toContain("eventEditTitle.value = item.title");
+    expect(app).toContain('stored.details = eventEditDetails.value.trim() || null');
     expect(app).toContain("stored.title = title");
     expect(css).toContain(".event-title-field");
+    expect(css).toContain(".event-details-field");
   });
 
   it("persists the thread and sends only one morning brief per day", () => {

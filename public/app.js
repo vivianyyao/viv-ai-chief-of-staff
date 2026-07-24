@@ -23,6 +23,7 @@ const eventDialogTime = document.querySelector("#event-dialog-time");
 const eventDialogDetails = document.querySelector("#event-dialog-details");
 const eventEditor = document.querySelector("#event-editor");
 const eventEditTitle = document.querySelector("#event-edit-title");
+const eventEditDetails = document.querySelector("#event-edit-details");
 const eventEditDate = document.querySelector("#event-edit-date");
 const eventEditStart = document.querySelector("#event-edit-start");
 const eventEditEnd = document.querySelector("#event-edit-end");
@@ -469,6 +470,7 @@ function openEventDetails(item) {
   eventReadonlyNote.hidden = editable;
   if (editable) {
     eventEditTitle.value = item.title;
+    eventEditDetails.value = item.details ?? "";
     eventEditDate.value = resolvedDate;
     eventEditStart.value = item.start;
     eventEditEnd.value = item.end;
@@ -509,6 +511,7 @@ eventEditor.addEventListener("submit", (event) => {
   if (!stored) return;
   const previousTitle = stored.title;
   stored.title = title;
+  stored.details = eventEditDetails.value.trim() || null;
   stored.date = eventEditDate.value;
   stored.start = eventEditStart.value;
   stored.end = eventEditEnd.value;

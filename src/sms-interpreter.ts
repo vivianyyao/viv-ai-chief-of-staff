@@ -117,7 +117,7 @@ export function resolveFatigueSchedulingFollowUp(
 
 const smsTool: Anthropic.Tool = {
   name: "interpret_text",
-  description: "Interpret one text message sent to Viv, an AI chief of staff.",
+  description: "Interpret one text message sent to Viv, an AI chief of staff. Calendar titles must be five words or fewer. Put useful event context into applicable who, where, and what lines. If a meaningful commitment is missing an essential end time, person, place, or purpose, ask one short clarification question instead of silently discarding it.",
   input_schema: {
     type: "object",
     properties: {
@@ -136,11 +136,11 @@ const smsTool: Anthropic.Tool = {
       proposedEnd: { type: ["string", "null"], description: "24-hour local end time for the proposed block in HH:MM format, or null" },
       recommendationReason: { type: ["string", "null"], description: "One calm lowercase sentence explaining why the proposed block fits, or null" },
       shouldAddToPlan: { type: "boolean", description: "True when the user states a definite existing commitment with enough timing detail for the local plan, or explicitly asks to add one" },
-      planItemTitle: { type: ["string", "null"], description: "Very short lowercase calendar label with only the subject and essential people, or null. Never include the date, time, venue, city, or address; put those in their dedicated fields or planItemDetails" },
+      planItemTitle: { type: ["string", "null"], description: "Lowercase calendar title of five words or fewer. Include only the event type and, when useful, essential people. Never include date, time, venue, city, or address" },
       planItemDate: { type: ["string", "null"], description: "User-facing date such as today or tomorrow, or null" },
       planItemStart: { type: ["string", "null"], description: "24-hour local start time in HH:MM format, or null" },
       planItemEnd: { type: ["string", "null"], description: "24-hour local end time in HH:MM format, or null" },
-      planItemDetails: { type: ["string", "null"], description: "Only useful extra context the user supplied beyond title, date, and time. Preserve URLs exactly. Null when there is no extra context" }
+      planItemDetails: { type: ["string", "null"], description: "Cohesive lowercase event context using only applicable labeled lines: who: ... newline where: ... newline what: ... . Omit labels that truly do not apply. Preserve URLs exactly. Null only when the user supplied no useful context beyond title, date, and time" }
     },
     required: ["kind", "intent", "taskOrRequest", "radarCategory", "durationMinutes", "deadline", "needsClarification", "clarificationQuestion", "availabilityProvided", "proposedTime", "proposedDate", "proposedStart", "proposedEnd", "recommendationReason", "shouldAddToPlan", "planItemTitle", "planItemDate", "planItemStart", "planItemEnd", "planItemDetails"],
     additionalProperties: false
@@ -148,7 +148,11 @@ const smsTool: Anthropic.Tool = {
 };
 
 export function validateSmsInterpretation(input: unknown): SmsInterpretation {
-  return smsInterpretationSchema.parse(input);
+  const value = smsInterpretationSchema.parse(input);
+  const planItemTitle = value.planItemTitle
+    ? value.planItemTitle.trim().split(/\s+/).slice(0, 5).join(" ")
+    : value.planItemTitle;
+  return { ...value, planItemTitle };
 }
 
 function normalizedTask(value: string): string {
