@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyRadarMemory, guardPlanConflicts, interpretSmsLocally, mergePendingEvent, prepareEventContext, resolveFatigueSchedulingFollowUp, validateSmsInterpretation } from "../src/sms-interpreter.js";
+import { applyRadarMemory, deriveEventContextFromMessage, guardPlanConflicts, interpretSmsLocally, mergePendingEvent, prepareEventContext, resolveFatigueSchedulingFollowUp, selectPendingEvent, validateSmsInterpretation } from "../src/sms-interpreter.js";
 import { isAllowedPhone, processSmsMessage, writeVivReply } from "../src/sms-service.js";
 
 describe("Viv SMS interpretation", () => {
@@ -83,6 +83,32 @@ describe("Viv SMS interpretation", () => {
       planItemWhy: "fun gno",
       planItemDetails: "who: grace and ivanna\nwhere: tbd\nwhat: craft night\nwhy: fun gno"
     });
+  });
+
+  it("extracts who, where, and what directly from a natural event sentence", () => {
+    const result = prepareEventContext(deriveEventContextFromMessage({
+      kind: "context", taskOrRequest: null, durationMinutes: null,
+      deadline: null, needsClarification: false, clarificationQuestion: null,
+      shouldAddToPlan: true, planItemTitle: "dinner with friends",
+      planItemDate: "today", planItemStart: "19:00", planItemEnd: "21:00",
+      planItemWho: null, planItemWhere: null, planItemWhat: null,
+      planItemWhy: null, planItemDetails: null
+    }, "dinner with ivanna and grace at marufuku in japantown at 7pm tonight"));
+    expect(result).toMatchObject({
+      planItemWho: "ivanna and grace",
+      planItemWhere: "marufuku in japantown",
+      planItemWhat: "dinner",
+      clarificationQuestion: "why?"
+    });
+  });
+
+  it("drops stale pending context when the user states a different timed event", () => {
+    const pending = {
+      title: "craft night", date: "today", start: "20:30", end: "23:00",
+      who: null, where: null, what: "craft night", why: null, details: null
+    };
+    expect(selectPendingEvent("dinner with ivanna at marufuku at 7pm", pending)).toBeNull();
+    expect(selectPendingEvent("grace and ivanna. location unknown yet", pending)).toEqual(pending);
   });
 
   it("attaches a duration-only reply to the one radar task waiting for it", () => {
