@@ -111,6 +111,22 @@ describe("Viv SMS interpretation", () => {
     expect(selectPendingEvent("grace and ivanna. location unknown yet", pending)).toEqual(pending);
   });
 
+  it("recognizes a natural answer to why", () => {
+    const result = prepareEventContext(deriveEventContextFromMessage({
+      kind: "context", taskOrRequest: null, durationMinutes: null,
+      deadline: null, needsClarification: true, clarificationQuestion: "why?",
+      shouldAddToPlan: true, planItemTitle: "dinner with friends",
+      planItemDate: "today", planItemStart: "19:00", planItemEnd: "21:00",
+      planItemWho: "ivanna and grace", planItemWhere: "marufuku in japantown",
+      planItemWhat: "dinner", planItemWhy: null, planItemDetails: null
+    }, "for a fun gno!"));
+    expect(result).toMatchObject({
+      shouldAddToPlan: true,
+      planItemWhy: "a fun gno",
+      planItemDetails: "who: ivanna and grace\nwhere: marufuku in japantown\nwhat: dinner\nwhy: a fun gno"
+    });
+  });
+
   it("attaches a duration-only reply to the one radar task waiting for it", () => {
     expect(applyRadarMemory({
       kind: "context", taskOrRequest: null, durationMinutes: 60, deadline: null,

@@ -238,11 +238,13 @@ export function deriveEventContextFromMessage(value: SmsInterpretation, message:
   const whoMatch = message.match(/\bwith\s+(.+?)\s+(?:at|in)\s+/i);
   const whereMatch = message.match(/\b(?:at|in)\s+(.+?)\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/i);
   const whatMatch = message.match(/^\s*(.+?)\s+(?:with\s+|at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm))/i);
+  const whyMatch = message.match(/(?:^|[.!?]\s*|\b)(?:for|because|so that|to)\s+(.+?)[.!?]*$/i);
   return {
     ...value,
     planItemWho: value.planItemWho ?? whoMatch?.[1]?.trim() ?? null,
     planItemWhere: value.planItemWhere ?? whereMatch?.[1]?.trim() ?? null,
-    planItemWhat: value.planItemWhat ?? whatMatch?.[1]?.trim() ?? value.planItemTitle
+    planItemWhat: value.planItemWhat ?? whatMatch?.[1]?.trim() ?? value.planItemTitle,
+    planItemWhy: value.planItemWhy ?? whyMatch?.[1]?.trim() ?? null
   };
 }
 
