@@ -117,7 +117,7 @@ export function resolveFatigueSchedulingFollowUp(
 
 const smsTool: Anthropic.Tool = {
   name: "interpret_text",
-  description: "Interpret one text message sent to Viv, an AI chief of staff. Calendar titles must be five words or fewer. For every calendar event, derive four literal detail lines from context: who: ..., where: ..., what: ..., why: ... . Never invent facts. If any genuinely applicable detail is unavailable, set needsClarification true and ask a compact question using the missing labels, such as who? where? why? Combine the answer with conversation context before adding the event.",
+  description: "Interpret one text message sent to Viv, an AI chief of staff. Calendar titles must be five words or fewer. For every calendar event, derive four literal detail lines from context: who: ..., where: ..., what: ..., why: ... . Never invent facts. If any genuinely applicable detail is unavailable, set needsClarification true and ask a compact question using the missing labels, such as who? where? why? Combine the answer with conversation context before adding the event. A duration at the start of a follow-up completes the currently pending event. A phrase such as 'we are doing craft night after until 11pm' describes a separate later event; never use 11pm as the pending event's end when its duration already determines the end.",
   input_schema: {
     type: "object",
     properties: {
@@ -153,6 +153,37 @@ export function validateSmsInterpretation(input: unknown): SmsInterpretation {
     ? value.planItemTitle.trim().split(/\s+/).slice(0, 5).join(" ")
     : value.planItemTitle;
   return { ...value, planItemTitle };
+}
+
+function comparablePlanDate(value: string | null | undefined, now = new Date()): string {
+  const normalized = value?.trim().toLowerCase();
+  const date = new Date(now);
+  if (normalized === "tomorrow") date.setDate(date.getDate() + 1);
+  if (normalized === "today" || normalized === "tomorrow") {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  }
+  return normalized ?? "";
+}
+
+function timeMinutes(value: string): number {
+  const [hour, minute] = value.split(":").map(Number);
+  return hour! * 60 + minute!;
+}
+
+export function guardPlanConflicts(value: SmsInterpretation, plan: LocalPlanItem[] = [], now = new Date()): SmsInterpretation {
+  if (!value.shouldAddToPlan || !value.planItemStart || !value.planItemEnd) return value;
+  const date = comparablePlanDate(value.planItemDate, now);
+  const start = timeMinutes(value.planItemStart);
+  const end = timeMinutes(value.planItemEnd);
+  const conflict = plan.find((item) => comparablePlanDate(item.date, now) === date
+    && start < timeMinutes(item.end) && end > timeMinutes(item.start));
+  if (!conflict) return value;
+  return {
+    ...value,
+    shouldAddToPlan: false,
+    needsClarification: true,
+    clarificationQuestion: `${value.planItemTitle ?? "that"} overlaps ${conflict.title} at ${value.planItemStart}–${conflict.end}. what should move?`
+  };
 }
 
 function normalizedTask(value: string): string {
@@ -213,7 +244,7 @@ export async function interpretSmsWithClaude(message: string, options: {
   });
   const call = response.content.find((block) => block.type === "tool_use" && block.name === "interpret_text");
   if (!call || call.type !== "tool_use") throw new Error("claude did not return a structured interpretation");
-  return applyRadarMemory(validateSmsInterpretation(call.input), options.radar);
+  return guardPlanConflicts(applyRadarMemory(validateSmsInterpretation(call.input), options.radar), options.plan);
 }
 
 export function interpretSmsLocally(message: string): SmsInterpretation {

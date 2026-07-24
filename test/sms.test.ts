@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyRadarMemory, interpretSmsLocally, resolveFatigueSchedulingFollowUp, validateSmsInterpretation } from "../src/sms-interpreter.js";
+import { applyRadarMemory, guardPlanConflicts, interpretSmsLocally, resolveFatigueSchedulingFollowUp, validateSmsInterpretation } from "../src/sms-interpreter.js";
 import { isAllowedPhone, processSmsMessage, writeVivReply } from "../src/sms-service.js";
 
 describe("Viv SMS interpretation", () => {
@@ -27,6 +27,22 @@ describe("Viv SMS interpretation", () => {
       planItemDate: "today", planItemStart: "19:00", planItemEnd: "21:00",
       planItemDetails: "who: grace and ivanna\nwhere: marufuku japantown\nwhat: dinner"
     }).planItemTitle).toBe("dinner in sf with grace");
+  });
+
+  it("asks before adding an event over an occupied block", () => {
+    const result = guardPlanConflicts({
+      kind: "context", taskOrRequest: null, durationMinutes: null,
+      deadline: null, needsClarification: false, clarificationQuestion: null,
+      shouldAddToPlan: true, planItemTitle: "craft night",
+      planItemDate: "today", planItemStart: "20:30", planItemEnd: "23:00",
+      planItemDetails: "who: grace and ivanna\nwhere: sf\nwhat: craft night\nwhy: spend time together"
+    }, [{ title: "dinner", date: "today", start: "19:00", end: "21:00", details: null }], new Date(2026, 6, 24, 16));
+    expect(result).toMatchObject({
+      shouldAddToPlan: false,
+      needsClarification: true,
+      clarificationQuestion: "craft night overlaps dinner at 20:30–21:00. what should move?"
+    });
+    expect(writeVivReply(result)).toContain("what should move?");
   });
 
   it("attaches a duration-only reply to the one radar task waiting for it", () => {
