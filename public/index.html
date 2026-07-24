@@ -122,7 +122,13 @@
     <form id="event-editor" class="event-editor" hidden>
       <div class="event-editor-grid">
         <label class="event-title-field">name<input id="event-edit-title" type="text" maxlength="80" required></label>
-        <label class="event-details-field">details<textarea id="event-edit-details" rows="4" maxlength="800" placeholder="who:&#10;where:&#10;what:"></textarea></label>
+        <fieldset class="event-context-fields">
+          <legend>details</legend>
+          <label>who<input id="event-edit-who" type="text" maxlength="160"></label>
+          <label>where<input id="event-edit-where" type="text" maxlength="200"></label>
+          <label>what<input id="event-edit-what" type="text" maxlength="240"></label>
+          <label>why<input id="event-edit-why" type="text" maxlength="240"></label>
+        </fieldset>
         <label>date<input id="event-edit-date" type="date" required></label>
         <label>start<input id="event-edit-start" type="time" step="300" required></label>
         <label>end<input id="event-edit-end" type="time" step="300" required></label>

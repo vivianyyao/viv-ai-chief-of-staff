@@ -23,7 +23,10 @@ const eventDialogTime = document.querySelector("#event-dialog-time");
 const eventDialogDetails = document.querySelector("#event-dialog-details");
 const eventEditor = document.querySelector("#event-editor");
 const eventEditTitle = document.querySelector("#event-edit-title");
-const eventEditDetails = document.querySelector("#event-edit-details");
+const eventEditWho = document.querySelector("#event-edit-who");
+const eventEditWhere = document.querySelector("#event-edit-where");
+const eventEditWhat = document.querySelector("#event-edit-what");
+const eventEditWhy = document.querySelector("#event-edit-why");
 const eventEditDate = document.querySelector("#event-edit-date");
 const eventEditStart = document.querySelector("#event-edit-start");
 const eventEditEnd = document.querySelector("#event-edit-end");
@@ -453,6 +456,24 @@ function renderEventDetails(details) {
   }
 }
 
+function parseEventContext(details) {
+  const result = { who: "", where: "", what: "", why: "" };
+  for (const line of String(details ?? "").split(/\n+/)) {
+    const match = /^\s*(who|where|what|why)\s*:\s*(.*)$/i.exec(line);
+    if (match) result[match[1].toLowerCase()] = match[2].trim();
+  }
+  return result;
+}
+
+function serializeEventContext() {
+  return [
+    ["who", eventEditWho.value.trim()],
+    ["where", eventEditWhere.value.trim()],
+    ["what", eventEditWhat.value.trim()],
+    ["why", eventEditWhy.value.trim()]
+  ].filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`).join("\n") || null;
+}
+
 function isEditableScheduleItem(item) {
   return ["confirmed", "conversation"].includes(item?.source);
 }
@@ -469,8 +490,12 @@ function openEventDetails(item) {
   eventEditor.hidden = !editable;
   eventReadonlyNote.hidden = editable;
   if (editable) {
+    const context = parseEventContext(item.details);
     eventEditTitle.value = item.title;
-    eventEditDetails.value = item.details ?? "";
+    eventEditWho.value = context.who;
+    eventEditWhere.value = context.where;
+    eventEditWhat.value = context.what;
+    eventEditWhy.value = context.why;
     eventEditDate.value = resolvedDate;
     eventEditStart.value = item.start;
     eventEditEnd.value = item.end;
@@ -511,7 +536,7 @@ eventEditor.addEventListener("submit", (event) => {
   if (!stored) return;
   const previousTitle = stored.title;
   stored.title = title;
-  stored.details = eventEditDetails.value.trim() || null;
+  stored.details = serializeEventContext();
   stored.date = eventEditDate.value;
   stored.start = eventEditStart.value;
   stored.end = eventEditEnd.value;

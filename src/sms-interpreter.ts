@@ -117,7 +117,7 @@ export function resolveFatigueSchedulingFollowUp(
 
 const smsTool: Anthropic.Tool = {
   name: "interpret_text",
-  description: "Interpret one text message sent to Viv, an AI chief of staff. Calendar titles must be five words or fewer. Put useful event context into applicable who, where, and what lines. If a meaningful commitment is missing an essential end time, person, place, or purpose, ask one short clarification question instead of silently discarding it.",
+  description: "Interpret one text message sent to Viv, an AI chief of staff. Calendar titles must be five words or fewer. For every calendar event, derive four literal detail lines from context: who: ..., where: ..., what: ..., why: ... . Never invent facts. If any genuinely applicable detail is unavailable, set needsClarification true and ask a compact question using the missing labels, such as who? where? why? Combine the answer with conversation context before adding the event.",
   input_schema: {
     type: "object",
     properties: {
@@ -140,7 +140,7 @@ const smsTool: Anthropic.Tool = {
       planItemDate: { type: ["string", "null"], description: "User-facing date such as today or tomorrow, or null" },
       planItemStart: { type: ["string", "null"], description: "24-hour local start time in HH:MM format, or null" },
       planItemEnd: { type: ["string", "null"], description: "24-hour local end time in HH:MM format, or null" },
-      planItemDetails: { type: ["string", "null"], description: "Cohesive lowercase event context using only applicable labeled lines: who: ... newline where: ... newline what: ... . Omit labels that truly do not apply. Preserve URLs exactly. Null only when the user supplied no useful context beyond title, date, and time" }
+      planItemDetails: { type: ["string", "null"], description: "Exactly four lowercase labeled lines: who: ... newline where: ... newline what: ... newline why: ... . Prefill each from conversation context without inventing facts. Preserve URLs exactly. If an applicable value is unknown, ask for it before setting shouldAddToPlan true" }
     },
     required: ["kind", "intent", "taskOrRequest", "radarCategory", "durationMinutes", "deadline", "needsClarification", "clarificationQuestion", "availabilityProvided", "proposedTime", "proposedDate", "proposedStart", "proposedEnd", "recommendationReason", "shouldAddToPlan", "planItemTitle", "planItemDate", "planItemStart", "planItemEnd", "planItemDetails"],
     additionalProperties: false
