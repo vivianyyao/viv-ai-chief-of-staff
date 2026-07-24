@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyRadarMemory, guardPlanConflicts, interpretSmsLocally, prepareEventContext, resolveFatigueSchedulingFollowUp, validateSmsInterpretation } from "../src/sms-interpreter.js";
+import { applyRadarMemory, guardPlanConflicts, interpretSmsLocally, mergePendingEvent, prepareEventContext, resolveFatigueSchedulingFollowUp, validateSmsInterpretation } from "../src/sms-interpreter.js";
 import { isAllowedPhone, processSmsMessage, writeVivReply } from "../src/sms-service.js";
 
 describe("Viv SMS interpretation", () => {
@@ -59,6 +59,29 @@ describe("Viv SMS interpretation", () => {
       needsClarification: true,
       clarificationQuestion: "why?",
       planItemDetails: "who: ivanna and grace\nwhere: marufuku, japantown\nwhat: dinner"
+    });
+  });
+
+  it("fills a pending event from the next conversational answer", () => {
+    const result = prepareEventContext(mergePendingEvent({
+      kind: "context", taskOrRequest: null, durationMinutes: null,
+      deadline: null, needsClarification: false, clarificationQuestion: null,
+      shouldAddToPlan: false, planItemTitle: null, planItemDate: null,
+      planItemStart: null, planItemEnd: null,
+      planItemWho: "grace and ivanna", planItemWhere: null,
+      planItemWhat: null, planItemWhy: "fun gno", planItemDetails: null
+    }, {
+      title: "craft night", date: "today", start: "20:30", end: "23:00",
+      who: null, where: null, what: "craft night", why: null, details: null
+    }, "grace and ivanna. location unknown yet. for a fun gno"));
+    expect(result).toMatchObject({
+      shouldAddToPlan: true,
+      needsClarification: false,
+      planItemWho: "grace and ivanna",
+      planItemWhere: "tbd",
+      planItemWhat: "craft night",
+      planItemWhy: "fun gno",
+      planItemDetails: "who: grace and ivanna\nwhere: tbd\nwhat: craft night\nwhy: fun gno"
     });
   });
 

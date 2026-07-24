@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { createPlanFromTask, interpretLocally } from "./demo.js";
 import { hasUsableAnthropicKey, interpretWithClaude, NeedsMoreDetailError } from "./interpreter.js";
 import { DateTime } from "luxon";
-import { applyRadarMemory, interpretSmsLocally, interpretSmsWithClaude, resolveFatigueSchedulingFollowUp, type RadarItem } from "./sms-interpreter.js";
+import { applyRadarMemory, interpretSmsLocally, interpretSmsWithClaude, resolveFatigueSchedulingFollowUp, type PendingPlanItem, type RadarItem } from "./sms-interpreter.js";
 import { processSmsMessage, writeVivReply, type SmsInterpreter } from "./sms-service.js";
 import { getCalendarEvents } from "./calendar.js";
 
@@ -57,6 +57,28 @@ export function normalizeRadar(input: unknown): RadarItem[] {
       needsClarification
     }] : [];
   });
+}
+
+export function normalizePendingEvent(input: unknown): PendingPlanItem | null {
+  if (!input || typeof input !== "object") return null;
+  const text = (key: string, limit: number) => key in input && typeof input[key as keyof typeof input] === "string"
+    ? String(input[key as keyof typeof input]).trim().slice(0, limit) || null
+    : null;
+  const title = text("title", 120);
+  const start = text("start", 20);
+  if (!title || !start || !/^\d{2}:\d{2}$/.test(start)) return null;
+  const end = text("end", 20);
+  return {
+    title,
+    date: text("date", 40),
+    start,
+    end: end && /^\d{2}:\d{2}$/.test(end) ? end : null,
+    who: text("who", 160),
+    where: text("where", 200),
+    what: text("what", 240),
+    why: text("why", 240),
+    details: text("details", 800)
+  };
 }
 
 function displayTime(value: string): string {
@@ -258,6 +280,7 @@ demoApp.post("/api/chat", async (req, res) => {
     : [];
   const plan = normalizeLocalPlan(req.body?.plan);
   const radar = normalizeRadar(req.body?.radar);
+  const pendingEvent = normalizePendingEvent(req.body?.pendingEvent);
   const fatigueFollowUp = resolveFatigueSchedulingFollowUp(message, radar, plan);
   if (/\b(?:what(?:'s| is)|show|tell me).*(?:full )?(?:schedule|calendar|on my day)\b/i.test(message)) {
     return res.json({
@@ -274,7 +297,7 @@ demoApp.post("/api/chat", async (req, res) => {
     const usesClaude = Boolean(apiKey && !apiKey.startsWith("your_"));
     if (usesClaude) {
       try {
-        const interpret: SmsInterpreter = (text) => interpretSmsWithClaude(text, { apiKey: apiKey!, model: process.env.ANTHROPIC_MODEL, conversation, plan, radar });
+        const interpret: SmsInterpreter = (text) => interpretSmsWithClaude(text, { apiKey: apiKey!, model: process.env.ANTHROPIC_MODEL, conversation, plan, radar, pendingEvent });
         const result = await processSmsMessage(message, interpret);
         return res.json({ ...result, interpreter: "claude" });
       } catch (error) {

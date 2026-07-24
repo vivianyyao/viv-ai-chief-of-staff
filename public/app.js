@@ -60,12 +60,13 @@ function loadMemory() {
       lastIntent: typeof value.lastIntent === "string" ? value.lastIntent : null,
       pendingAction: typeof value.pendingAction === "string" ? value.pendingAction : null,
       pendingProposal: value.pendingProposal && typeof value.pendingProposal === "object" ? value.pendingProposal : null,
+      pendingEvent: value.pendingEvent && typeof value.pendingEvent === "object" ? value.pendingEvent : null,
       selectedPlanDate: typeof value.selectedPlanDate === "string" ? value.selectedPlanDate : null,
       morningBriefDate: typeof value.morningBriefDate === "string" ? value.morningBriefDate : null,
       morningBriefSource: typeof value.morningBriefSource === "string" ? value.morningBriefSource : null
     };
   } catch {
-    return { history: [], plannerItems: [], scheduleItems: [], lastIntent: null, pendingAction: null, pendingProposal: null, selectedPlanDate: null, morningBriefDate: null, morningBriefSource: null };
+    return { history: [], plannerItems: [], scheduleItems: [], lastIntent: null, pendingAction: null, pendingProposal: null, pendingEvent: null, selectedPlanDate: null, morningBriefDate: null, morningBriefSource: null };
   }
 }
 
@@ -76,6 +77,7 @@ const scheduleItems = memory.scheduleItems.filter((item) => item?.source !== "go
 let lastIntent = memory.lastIntent;
 let pendingAction = memory.pendingAction;
 let pendingProposal = memory.pendingProposal;
+let pendingEvent = memory.pendingEvent;
 let editingScheduleItem = null;
 let calendarRequestId = 0;
 let morningBriefDate = memory.morningBriefDate;
@@ -92,6 +94,7 @@ function saveMemory() {
       lastIntent,
       pendingAction,
       pendingProposal,
+      pendingEvent,
       selectedPlanDate,
       morningBriefDate,
       morningBriefSource
@@ -746,6 +749,7 @@ function captureScheduleItem(interpretation) {
     end: interpretation.planItemEnd,
     details: interpretation.planItemDetails ?? null
   });
+  pendingEvent = null;
 }
 
 function captureProposal(interpretation) {
@@ -854,6 +858,19 @@ function updateStateFromInterpretation(interpretation) {
   if (interpretation.needsClarification) pendingAction = interpretation.clarificationQuestion ?? "waiting for one detail";
   else if (interpretation.proposedTime) pendingAction = `proposal: ${interpretation.proposedTime}`;
   else pendingAction = null;
+  if (interpretation?.planItemTitle && interpretation?.planItemStart && interpretation?.needsClarification && !interpretation?.shouldAddToPlan) {
+    pendingEvent = {
+      title: interpretation.planItemTitle,
+      date: interpretation.planItemDate ?? null,
+      start: interpretation.planItemStart,
+      end: interpretation.planItemEnd ?? null,
+      who: interpretation.planItemWho ?? null,
+      where: interpretation.planItemWhere ?? null,
+      what: interpretation.planItemWhat ?? null,
+      why: interpretation.planItemWhy ?? null,
+      details: interpretation.planItemDetails ?? null
+    };
+  }
   captureTask(interpretation);
   captureScheduleItem(interpretation);
   captureProposal(interpretation);
@@ -905,7 +922,7 @@ form.addEventListener("submit", async (event) => {
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, conversation: priorConversation, plan: scheduleItems, radar: plannerItems, pendingProposal })
+      body: JSON.stringify({ message, conversation: priorConversation, plan: scheduleItems, radar: plannerItems, pendingProposal, pendingEvent })
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "i couldn’t make sense of that just now.");
