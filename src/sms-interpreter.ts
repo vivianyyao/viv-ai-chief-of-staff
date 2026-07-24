@@ -21,6 +21,10 @@ export const smsInterpretationSchema = z.object({
   planItemDate: z.string().trim().min(2).max(40).nullable().optional(),
   planItemStart: z.string().trim().min(2).max(20).nullable().optional(),
   planItemEnd: z.string().trim().min(2).max(20).nullable().optional(),
+  planItemWho: z.string().trim().min(1).max(160).nullable().optional(),
+  planItemWhere: z.string().trim().min(1).max(200).nullable().optional(),
+  planItemWhat: z.string().trim().min(1).max(240).nullable().optional(),
+  planItemWhy: z.string().trim().min(1).max(240).nullable().optional(),
   planItemDetails: z.string().trim().min(2).max(800).nullable().optional()
 }).strict().superRefine((value, context) => {
   if (value.kind !== "context" && !value.taskOrRequest) {
@@ -140,9 +144,13 @@ const smsTool: Anthropic.Tool = {
       planItemDate: { type: ["string", "null"], description: "User-facing date such as today or tomorrow, or null" },
       planItemStart: { type: ["string", "null"], description: "24-hour local start time in HH:MM format, or null" },
       planItemEnd: { type: ["string", "null"], description: "24-hour local end time in HH:MM format, or null" },
+      planItemWho: { type: ["string", "null"], description: "People involved, excluding the user, derived from conversation context or null" },
+      planItemWhere: { type: ["string", "null"], description: "Specific venue, neighborhood, city, address, or meeting link derived from context or null" },
+      planItemWhat: { type: ["string", "null"], description: "Plain description of what is happening, derived from context or null" },
+      planItemWhy: { type: ["string", "null"], description: "Purpose or reason for the event, derived from context or null" },
       planItemDetails: { type: ["string", "null"], description: "Exactly four lowercase labeled lines: who: ... newline where: ... newline what: ... newline why: ... . Prefill each from conversation context without inventing facts. Preserve URLs exactly. If an applicable value is unknown, ask for it before setting shouldAddToPlan true" }
     },
-    required: ["kind", "intent", "taskOrRequest", "radarCategory", "durationMinutes", "deadline", "needsClarification", "clarificationQuestion", "availabilityProvided", "proposedTime", "proposedDate", "proposedStart", "proposedEnd", "recommendationReason", "shouldAddToPlan", "planItemTitle", "planItemDate", "planItemStart", "planItemEnd", "planItemDetails"],
+    required: ["kind", "intent", "taskOrRequest", "radarCategory", "durationMinutes", "deadline", "needsClarification", "clarificationQuestion", "availabilityProvided", "proposedTime", "proposedDate", "proposedStart", "proposedEnd", "recommendationReason", "shouldAddToPlan", "planItemTitle", "planItemDate", "planItemStart", "planItemEnd", "planItemWho", "planItemWhere", "planItemWhat", "planItemWhy", "planItemDetails"],
     additionalProperties: false
   }
 };
@@ -153,6 +161,32 @@ export function validateSmsInterpretation(input: unknown): SmsInterpretation {
     ? value.planItemTitle.trim().split(/\s+/).slice(0, 5).join(" ")
     : value.planItemTitle;
   return { ...value, planItemTitle };
+}
+
+export function prepareEventContext(value: SmsInterpretation): SmsInterpretation {
+  if (!value.planItemTitle) return value;
+  const context = {
+    who: value.planItemWho ?? null,
+    where: value.planItemWhere ?? null,
+    what: value.planItemWhat ?? value.planItemTitle,
+    why: value.planItemWhy ?? null
+  };
+  const details = Object.entries(context)
+    .filter(([, entry]) => entry)
+    .map(([label, entry]) => `${label}: ${entry}`)
+    .join("\n") || null;
+  const missing = Object.entries(context).filter(([, entry]) => !entry).map(([label]) => label);
+  if (value.shouldAddToPlan && missing.length) {
+    return {
+      ...value,
+      planItemWhat: context.what,
+      planItemDetails: details,
+      shouldAddToPlan: false,
+      needsClarification: true,
+      clarificationQuestion: missing.map((label) => `${label}?`).join(" ")
+    };
+  }
+  return { ...value, planItemWhat: context.what, planItemDetails: details };
 }
 
 function comparablePlanDate(value: string | null | undefined, now = new Date()): string {
@@ -244,7 +278,7 @@ export async function interpretSmsWithClaude(message: string, options: {
   });
   const call = response.content.find((block) => block.type === "tool_use" && block.name === "interpret_text");
   if (!call || call.type !== "tool_use") throw new Error("claude did not return a structured interpretation");
-  return guardPlanConflicts(applyRadarMemory(validateSmsInterpretation(call.input), options.radar), options.plan);
+  return guardPlanConflicts(prepareEventContext(applyRadarMemory(validateSmsInterpretation(call.input), options.radar)), options.plan);
 }
 
 export function interpretSmsLocally(message: string): SmsInterpretation {

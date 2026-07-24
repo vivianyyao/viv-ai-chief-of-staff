@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyRadarMemory, guardPlanConflicts, interpretSmsLocally, resolveFatigueSchedulingFollowUp, validateSmsInterpretation } from "../src/sms-interpreter.js";
+import { applyRadarMemory, guardPlanConflicts, interpretSmsLocally, prepareEventContext, resolveFatigueSchedulingFollowUp, validateSmsInterpretation } from "../src/sms-interpreter.js";
 import { isAllowedPhone, processSmsMessage, writeVivReply } from "../src/sms-service.js";
 
 describe("Viv SMS interpretation", () => {
@@ -43,6 +43,23 @@ describe("Viv SMS interpretation", () => {
       clarificationQuestion: "craft night overlaps dinner at 20:30–21:00. what should move?"
     });
     expect(writeVivReply(result)).toContain("what should move?");
+  });
+
+  it("builds literal event fields and asks for any missing context", () => {
+    const result = prepareEventContext({
+      kind: "context", taskOrRequest: null, durationMinutes: null,
+      deadline: null, needsClarification: false, clarificationQuestion: null,
+      shouldAddToPlan: true, planItemTitle: "dinner with friends",
+      planItemDate: "today", planItemStart: "19:00", planItemEnd: "21:00",
+      planItemWho: "ivanna and grace", planItemWhere: "marufuku, japantown",
+      planItemWhat: "dinner", planItemWhy: null, planItemDetails: null
+    });
+    expect(result).toMatchObject({
+      shouldAddToPlan: false,
+      needsClarification: true,
+      clarificationQuestion: "why?",
+      planItemDetails: "who: ivanna and grace\nwhere: marufuku, japantown\nwhat: dinner"
+    });
   });
 
   it("attaches a duration-only reply to the one radar task waiting for it", () => {
