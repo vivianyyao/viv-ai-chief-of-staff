@@ -123,6 +123,11 @@ describe("conversation-first browser experience", () => {
     expect(app).toContain("stored.title = title");
     expect(css).toContain(".event-title-field");
     expect(css).toContain(".event-context-fields");
+    expect(html).toContain('id="event-edit-toggle"');
+    expect(html).toContain('id="event-edit-cancel"');
+    expect(app).toContain('eventEditor.hidden = true');
+    expect(app).toContain('eventEditToggle.addEventListener("click"');
+    expect(css).toContain(".event-edit-toggle");
   });
 
   it("persists the thread and sends only one morning brief per day", () => {

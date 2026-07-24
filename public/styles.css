@@ -134,6 +134,7 @@ body.showing-plan .app-shell { padding-bottom: 0; }
 .event-dialog-time { margin: 8px 0 0; color: #7d7971; font-size: 13px; }
 .event-dialog-details { margin-top: 22px; padding-top: 18px; border-top: 1px solid #e5e1d9; color: #4c4944; font-size: 13px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 .event-dialog-details a { color: #476d57; text-underline-offset: 3px; }
+.event-edit-toggle { width: 100%; margin-top: 22px; padding: 11px 16px; border: 1px solid #d8d3ca; border-radius: 12px; color: var(--ink); background: #f5f1e9; font: inherit; font-size: 12px; cursor: pointer; }
 .event-editor { margin-top: 22px; padding-top: 18px; border-top: 1px solid #e5e1d9; }
 .event-editor-grid { display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 10px; }
 .event-editor-grid .event-title-field, .event-editor-grid .event-context-fields { grid-column: 1 / -1; }
@@ -144,6 +145,8 @@ body.showing-plan .app-shell { padding-bottom: 0; }
 .event-editor input:focus { outline: 2px solid rgba(111,169,134,.2); border-color: #83aa91; }
 .event-editor-actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; }
 .event-editor-actions button { padding: 9px 13px; border: 1px solid #d8d3ca; border-radius: 10px; font: inherit; font-size: 11px; cursor: pointer; }
+.event-editor-confirm { display: flex; gap: 8px; }
+.event-edit-cancel { color: #716d66; background: transparent; }
 .event-delete { background: transparent; color: #9a5146; }
 .event-save { background: var(--ink); color: white; border-color: var(--ink) !important; }
 .event-editor-error { margin: 10px 0 0; color: #9a5146; font-size: 11px; }

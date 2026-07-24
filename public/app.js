@@ -21,6 +21,7 @@ const eventDialogTitle = document.querySelector("#event-dialog-title");
 const eventDialogDate = document.querySelector("#event-dialog-date");
 const eventDialogTime = document.querySelector("#event-dialog-time");
 const eventDialogDetails = document.querySelector("#event-dialog-details");
+const eventEditToggle = document.querySelector("#event-edit-toggle");
 const eventEditor = document.querySelector("#event-editor");
 const eventEditTitle = document.querySelector("#event-edit-title");
 const eventEditWho = document.querySelector("#event-edit-who");
@@ -32,6 +33,7 @@ const eventEditStart = document.querySelector("#event-edit-start");
 const eventEditEnd = document.querySelector("#event-edit-end");
 const eventEditorError = document.querySelector("#event-editor-error");
 const eventDelete = document.querySelector("#event-delete");
+const eventEditCancel = document.querySelector("#event-edit-cancel");
 const eventReadonlyNote = document.querySelector("#event-readonly-note");
 const developerPanel = document.querySelector("#developer-panel");
 const developerToggle = document.querySelector("#developer-toggle");
@@ -490,7 +492,8 @@ function openEventDetails(item) {
   renderEventDetails(item.details);
   eventEditorError.hidden = true;
   const editable = isEditableScheduleItem(item);
-  eventEditor.hidden = !editable;
+  eventEditor.hidden = true;
+  eventEditToggle.hidden = !editable;
   eventReadonlyNote.hidden = editable;
   if (editable) {
     const context = parseEventContext(item.details);
@@ -509,6 +512,21 @@ function openEventDetails(item) {
   }
   eventDialog.showModal();
 }
+
+eventEditToggle.addEventListener("click", () => {
+  if (!isEditableScheduleItem(editingScheduleItem)) return;
+  eventEditToggle.hidden = true;
+  eventDialogDetails.hidden = true;
+  eventEditor.hidden = false;
+  eventEditTitle.focus();
+});
+
+eventEditCancel.addEventListener("click", () => {
+  if (!editingScheduleItem) return;
+  eventEditor.hidden = true;
+  eventEditToggle.hidden = false;
+  renderEventDetails(editingScheduleItem.details);
+});
 
 eventDialogClose.addEventListener("click", () => eventDialog.close());
 eventDialog.addEventListener("close", () => { editingScheduleItem = null; });
