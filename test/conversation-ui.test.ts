@@ -126,6 +126,8 @@ describe("conversation-first browser experience", () => {
     expect(css).toContain(".message-row.has-quick-replies");
     expect(app).toContain('source: "confirmed"');
     expect(app).toContain('`added.\\n\\n${proposal.title}');
+    expect(app).toContain("const reply = pendingProposal");
+    expect(app).not.toContain("const reply = data.interpretation?.proposedTime");
     expect(app).not.toContain("it’s on your local plan. i didn’t change google calendar.");
   });
 

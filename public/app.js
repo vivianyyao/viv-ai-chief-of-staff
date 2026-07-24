@@ -871,12 +871,12 @@ form.addEventListener("submit", async (event) => {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "i couldn’t make sense of that just now.");
     thinking.remove();
-    const reply = data.interpretation?.proposedTime
+    updateStateFromInterpretation(data.interpretation);
+    const reply = pendingProposal
       ? `${data.reply}\n\nadd it to your plan?`
       : data.reply;
     const vivRow = addMessage(reply, "viv");
     history.push({ role: "assistant", content: reply });
-    updateStateFromInterpretation(data.interpretation);
     if (pendingProposal) addProposalActions(vivRow);
   } catch (error) {
     thinking.remove();
