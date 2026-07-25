@@ -171,6 +171,44 @@ describe("Viv SMS interpretation", () => {
     });
   });
 
+  it("does not demand rich details for a simple personal block", () => {
+    const result = prepareEventContext({
+      kind: "context", taskOrRequest: null, durationMinutes: null,
+      deadline: null, needsClarification: false, clarificationQuestion: null,
+      shouldAddToPlan: true, planItemTitle: "walking truffle",
+      planItemDate: "today", planItemStart: "17:15", planItemEnd: "17:50",
+      planItemWho: null, planItemWhere: null, planItemWhat: "walking truffle",
+      planItemWhy: null, planItemDetails: null
+    });
+    expect(result).toMatchObject({
+      shouldAddToPlan: true,
+      needsClarification: false,
+      clarificationQuestion: null,
+      planItemDetails: null
+    });
+  });
+
+  it("stops detail questions when the user says to skip them", () => {
+    const result = prepareEventContext(mergePendingEvent({
+      kind: "context", taskOrRequest: null, durationMinutes: null,
+      deadline: null, needsClarification: false, clarificationQuestion: null,
+      shouldAddToPlan: false, planItemTitle: null, planItemDate: null,
+      planItemStart: null, planItemEnd: null, planItemWho: null,
+      planItemWhere: null, planItemWhat: null, planItemWhy: null,
+      planItemDetails: null
+    }, {
+      title: "craft night", date: "today", start: "21:00", end: "23:00",
+      who: null, where: null, what: "craft night", why: null, details: null
+    }, "skip those and add to cal"));
+    expect(result).toMatchObject({
+      shouldAddToPlan: true,
+      skipEventDetails: true,
+      needsClarification: false,
+      clarificationQuestion: null,
+      planItemDetails: null
+    });
+  });
+
   it("attaches a duration-only reply to the one radar task waiting for it", () => {
     expect(applyRadarMemory({
       kind: "context", taskOrRequest: null, durationMinutes: 60, deadline: null,

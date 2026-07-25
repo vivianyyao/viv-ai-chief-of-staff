@@ -25,7 +25,8 @@ export const smsInterpretationSchema = z.object({
   planItemWhere: z.string().trim().min(1).max(200).nullable().optional(),
   planItemWhat: z.string().trim().min(1).max(240).nullable().optional(),
   planItemWhy: z.string().trim().min(1).max(240).nullable().optional(),
-  planItemDetails: z.string().trim().min(2).max(800).nullable().optional()
+  planItemDetails: z.string().trim().min(2).max(800).nullable().optional(),
+  skipEventDetails: z.boolean().optional()
 }).strict().superRefine((value, context) => {
   if (value.kind !== "context" && !value.taskOrRequest) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "task or request is required", path: ["taskOrRequest"] });
@@ -133,7 +134,7 @@ export function resolveFatigueSchedulingFollowUp(
 
 const smsTool: Anthropic.Tool = {
   name: "interpret_text",
-  description: "Interpret one text message sent to Viv, an AI chief of staff. Calendar titles must be five words or fewer. For every calendar event, derive four literal detail lines from context in this order: who: ..., what: ..., where: ..., why: ... . Never invent facts. If any genuinely applicable detail is unavailable, set needsClarification true and ask a compact question using the missing labels, such as who? what? where? why? Combine the answer with conversation context before adding the event. A duration at the start of a follow-up completes the currently pending event. A phrase such as 'we are doing craft night after until 11pm' describes a separate later event; never use 11pm as the pending event's end when its duration already determines the end.",
+  description: "Interpret one text message sent to Viv, an AI chief of staff. Calendar titles must be five words or fewer. Event details are optional. For rich events, derive useful supplied context in this order: who, what, where, why. Never invent facts. Do not ask for these fields on simple personal blocks such as walks, workouts, errands, focus time, or preparation. When the user says to skip details or just add the event, set skipEventDetails true and stop asking. Combine relevant answers with conversation context. A duration at the start of a follow-up completes the currently pending event. A phrase such as 'we are doing craft night after until 11pm' describes a separate later event; never use 11pm as the pending event's end when its duration already determines the end.",
   input_schema: {
     type: "object",
     properties: {
@@ -160,7 +161,8 @@ const smsTool: Anthropic.Tool = {
       planItemWhat: { type: ["string", "null"], description: "Plain description of what is happening, derived from context or null" },
       planItemWhere: { type: ["string", "null"], description: "Specific venue, neighborhood, city, address, or meeting link derived from context or null" },
       planItemWhy: { type: ["string", "null"], description: "Purpose or reason for the event, derived from context or null" },
-      planItemDetails: { type: ["string", "null"], description: "Exactly four lowercase labeled lines: who: ... newline what: ... newline where: ... newline why: ... . Prefill each from conversation context without inventing facts. Preserve URLs exactly. If an applicable value is unknown, ask for it before setting shouldAddToPlan true" }
+      planItemDetails: { type: ["string", "null"], description: "Lowercase labeled lines in the order who, what, where, why. Include only useful details the user supplied. Preserve URLs exactly" },
+      skipEventDetails: { type: "boolean", description: "True when the user says to skip details, just add it, or otherwise declines further event questions" }
     },
     required: ["kind", "intent", "taskOrRequest", "radarCategory", "durationMinutes", "deadline", "needsClarification", "clarificationQuestion", "availabilityProvided", "proposedTime", "proposedDate", "proposedStart", "proposedEnd", "recommendationReason", "shouldAddToPlan", "planItemTitle", "planItemDate", "planItemStart", "planItemEnd", "planItemWho", "planItemWhere", "planItemWhat", "planItemWhy", "planItemDetails"],
     additionalProperties: false
@@ -177,6 +179,15 @@ export function validateSmsInterpretation(input: unknown): SmsInterpretation {
 
 export function prepareEventContext(value: SmsInterpretation): SmsInterpretation {
   if (!value.planItemTitle) return value;
+  const lightweightEvent = /\b(walk|walking|workout|gym|commute|errand|focus|prep|study|run|running|lunch break|meditat|nap)\b/i.test(value.planItemTitle);
+  if (value.skipEventDetails || lightweightEvent) {
+    return {
+      ...value,
+      needsClarification: false,
+      clarificationQuestion: null,
+      planItemDetails: null
+    };
+  }
   const context = {
     who: value.planItemWho ?? null,
     what: value.planItemWhat ?? value.planItemTitle,
@@ -203,6 +214,8 @@ export function prepareEventContext(value: SmsInterpretation): SmsInterpretation
 
 export function mergePendingEvent(value: SmsInterpretation, pending: PendingPlanItem | null | undefined, message = ""): SmsInterpretation {
   if (!pending) return value;
+  const skipEventDetails = Boolean(value.skipEventDetails)
+    || /\b(skip|no|don'?t need|without)\s+(?:those\s+|the\s+)?details\b|\bskip those\b|\bjust add (?:it|that)(?: to (?:my )?(?:cal|calendar|plan))?\b|\badd (?:it|that) (?:as is|anyway)\b/i.test(message);
   const explicitUnknown = (field: "where" | "who" | "why") => {
     const text = [message, value.planItemWhere, value.planItemWho, value.planItemWhy, value.taskOrRequest].filter(Boolean).join(" ");
     return new RegExp(`${field} (?:is )?(?:unknown|tbd|not sure)|(?:unknown|tbd|not sure)(?: yet)?`, "i").test(text) ? "tbd" : null;
@@ -219,7 +232,8 @@ export function mergePendingEvent(value: SmsInterpretation, pending: PendingPlan
     planItemWho: value.planItemWho ?? pending.who ?? explicitUnknown("who"),
     planItemWhere: value.planItemWhere ?? pending.where ?? explicitUnknown("where"),
     planItemWhat: value.planItemWhat ?? pending.what,
-    planItemWhy: value.planItemWhy ?? pending.why ?? explicitUnknown("why")
+    planItemWhy: value.planItemWhy ?? pending.why ?? explicitUnknown("why"),
+    skipEventDetails
   };
 }
 
