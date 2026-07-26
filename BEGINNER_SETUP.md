@@ -23,11 +23,11 @@ The current path is:
 4. Viv writes a short, natural reply.
 5. Twilio returns the reply when a paid, registered sender is connected.
 
-The local conversation page runs the same Claude interpretation without sending a real text.
+The local browser thread runs the same Claude interpretation without sending a real text. It is intentionally one continuous conversation rather than a dashboard.
 
 ## What it does not do
 
-It does not read or change calendars, send reminders, store task history, support several users, or carry on a confirmation conversation. It does not remember earlier messages yet.
+It can read today's Google Calendar after you approve read-only access. It saves the conversation, known tasks, local commitments, and tentative recommendations privately in this browser so a refresh does not erase them. It does not change calendars, send reminders, sync memory across devices, or support several users.
 
 ## Accounts you will eventually need
 
@@ -176,12 +176,11 @@ npm run google:auth
 1. Terminal prints a long web address beginning with `https://accounts.google.com`. Copy the entire address and paste it into Safari.
 2. Choose the same Google account you added as a test user.
 3. Google may say the app has not been verified. Click **Advanced**, then **Go to Text to Timeblock (unsafe)**. This warning is expected for your private test app.
-4. Review the calendar availability permission and click **Continue** or **Allow**.
+4. Review the read-only calendar permission and click **Continue** or **Allow**. This lets Viv see event names and times, but not change them.
 5. The browser should say **Google Calendar connected**.
-6. Return to Terminal. Copy only the value printed after `GOOGLE_REFRESH_TOKEN=`.
-7. In `.env`, replace `your_google_refresh_token_here` with that copied value, then save.
+6. Return to Terminal. It should say the private token was saved directly to `.env`; you do not need to copy or paste it.
 
-How to confirm: the browser says the calendar is connected and your `.env` has a long refresh-token value. The permission is limited to free/busy availability; it cannot create calendar events.
+How to confirm: the browser says the calendar is connected and your `.env` has a long refresh-token value. The permission is read-only; it cannot create, move, or delete calendar events.
 
 ## Step 11: create a Twilio account without buying yet
 

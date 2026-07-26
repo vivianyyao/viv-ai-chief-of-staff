@@ -2,20 +2,21 @@
 
 ## What it does
 
-Viv is an AI chief of staff designed for text messages. The current MVP accepts a message, asks Claude to identify the task or request, duration, deadline, and whether clarification is needed, then replies in Viv's concise voice.
+Viv is an AI chief of staff built around one private conversation. The current browser MVP accepts a natural message, asks Claude to understand its intent and relevant details, remembers the thread locally, reads today's Google Calendar without changing it, and replies in Viv's concise voice.
 
 ## What it does not do yet
 
-- It does not read or change a calendar.
-- It does not remember earlier messages or handle confirmations yet.
+- It cannot create, move, or delete calendar events.
+- It remembers the conversation, known tasks, local commitments, and tentative recommendations in this browser.
+- It does not handle yes/no confirmations yet.
 - It does not support multiple people.
-- It does not store tasks or message history.
+- It does not sync memory across browsers or devices.
 - It is not permanently hosted.
 - Real personalized SMS replies require a paid, registered Twilio sender.
 
-## Local Viv experience
+## Local Viv conversation
 
-The local conversation simulator uses Claude when `ANTHROPIC_API_KEY` is configured and falls back to a simple offline interpreter when it is not:
+The local conversation uses Claude when `ANTHROPIC_API_KEY` is configured and falls back to a simple offline interpreter when it is not:
 
 ```bash
 npm run demo

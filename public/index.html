@@ -3,43 +3,166 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f5f1e9">
+  <meta name="theme-color" content="#f4f0e8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="viv">
   <title>viv · your ai chief of staff</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/viv-mark.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/viv-180.png">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <main class="shell">
-    <header class="chat-header">
+  <main class="app-shell">
+    <header class="app-header">
       <div class="identity">
-        <div class="avatar" aria-hidden="true">v</div>
-        <div><h1>viv</h1><p>your ai chief of staff</p></div>
+        <div class="avatar" aria-hidden="true">
+          <svg class="viv-mark" viewBox="0 0 32 32" focusable="false">
+            <path class="viv-mark-main" d="M15.8 5.2c.3 6.2 3.7 9.7 9.8 10.2-6.1.5-9.5 4-9.8 10.2-.4-6.2-3.8-9.7-9.9-10.2 6.1-.5 9.5-4 9.9-10.2Z"/>
+            <circle class="viv-mark-dot" cx="24.7" cy="7.2" r="1.6"/>
+          </svg>
+        </div>
+        <h1 class="sr-only">viv</h1>
       </div>
-      <div class="presence"><i></i><span>local</span></div>
+      <nav class="view-tabs" aria-label="viv views">
+        <button class="view-tab is-active" type="button" data-view="chat" aria-selected="true">chat</button>
+        <button class="view-tab" type="button" data-view="plan" aria-selected="false">day</button>
+      </nav>
+      <div class="header-actions">
+        <button id="developer-toggle" class="developer-toggle" type="button" aria-label="open developer tools" title="developer tools">•••</button>
+      </div>
     </header>
 
-    <section id="conversation" class="conversation" aria-live="polite" aria-label="Conversation with Viv">
-      <div class="day-divider"><span>today</span></div>
-      <article class="message-row viv-row intro-message">
-        <div class="message viv-message">
-          <p>hi. what’s taking up space?</p>
-          <p>send me a task, a loose end, or just how you’re feeling.</p>
+    <section id="chat-view" class="app-view chat-view" aria-label="chat with viv">
+      <section id="conversation" class="conversation" aria-live="polite" aria-label="conversation with viv">
+        <div class="day-divider"><span>today</span></div>
+      </section>
+
+      <p id="error" class="error" role="alert" hidden></p>
+
+      <form id="chat-form" class="composer-wrap">
+        <label class="sr-only" for="message">message viv</label>
+        <div class="composer">
+          <textarea id="message" rows="1" placeholder="text viv..." autocomplete="off" spellcheck="true"></textarea>
+          <button id="send-button" type="submit" aria-label="send message">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4"/></svg>
+          </button>
         </div>
-      </article>
+      </form>
     </section>
 
-    <p id="error" class="error" role="alert" hidden></p>
+    <section id="plan-view" class="app-view plan-view" aria-label="viv day" hidden>
+      <header class="plan-heading">
+        <div>
+          <p id="plan-day-label" class="eyebrow">today</p>
+          <h2 id="plan-date"></h2>
+        </div>
+        <div class="plan-heading-actions">
+          <div class="date-navigation" aria-label="choose a day">
+            <button id="previous-day" type="button" aria-label="previous day">←</button>
+            <button id="today-day" type="button">today</button>
+            <button id="next-day" type="button" aria-label="next day">→</button>
+          </div>
+        </div>
+      </header>
 
-    <form id="chat-form" class="composer-wrap">
-      <label class="sr-only" for="message">message viv</label>
-      <div class="composer">
-        <textarea id="message" rows="1" placeholder="text what’s on your mind…" autocomplete="off" spellcheck="true"></textarea>
-        <button id="send-button" type="submit" aria-label="send message">
-          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4"/></svg>
-        </button>
+      <div class="planner-layout">
+        <section class="schedule-card" aria-labelledby="schedule-title">
+          <header class="card-heading">
+            <div>
+              <h3 id="schedule-title">schedule</h3>
+            </div>
+            <span id="calendar-status" class="sr-only" aria-live="polite"><span>connecting calendar</span></span>
+          </header>
+          <div class="timeline" aria-label="day timeline from 06:00 to 00:00">
+            <div id="schedule-layer" class="schedule-layer" aria-live="polite"></div>
+            <div class="time-row"><time>06:00</time><i></i></div>
+            <div class="time-row"><time>07:00</time><i></i></div>
+            <div class="time-row"><time>08:00</time><i></i></div>
+            <div class="time-row"><time>09:00</time><i></i></div>
+            <div class="time-row"><time>10:00</time><i></i></div>
+            <div class="time-row"><time>11:00</time><i></i></div>
+            <div class="time-row"><time>12:00</time><i></i></div>
+            <div class="time-row"><time>13:00</time><i></i></div>
+            <div class="time-row"><time>14:00</time><i></i></div>
+            <div class="time-row"><time>15:00</time><i></i></div>
+            <div class="time-row"><time>16:00</time><i></i></div>
+            <div class="time-row"><time>17:00</time><i></i></div>
+            <div class="time-row"><time>18:00</time><i></i></div>
+            <div class="time-row"><time>19:00</time><i></i></div>
+            <div class="time-row"><time>20:00</time><i></i></div>
+            <div class="time-row"><time>21:00</time><i></i></div>
+            <div class="time-row"><time>22:00</time><i></i></div>
+            <div class="time-row"><time>23:00</time><i></i></div>
+            <div class="time-row"><time>00:00</time><i></i></div>
+          </div>
+        </section>
+
+        <aside class="radar-card" aria-labelledby="radar-title">
+          <header class="card-heading">
+            <div>
+              <h3 id="radar-title">radar</h3>
+            </div>
+            <span id="radar-count" class="radar-count">0</span>
+          </header>
+          <div id="radar-list" class="radar-list" aria-live="polite"></div>
+        </aside>
       </div>
-      <p class="local-note">private local preview · nothing will be changed</p>
-    </form>
+    </section>
   </main>
-  <script src="/app.js"></script>
+
+  <dialog id="event-dialog" class="event-dialog" aria-labelledby="event-dialog-title">
+    <button id="event-dialog-close" class="event-dialog-close" type="button" aria-label="close event details">×</button>
+    <p id="event-dialog-date" class="eyebrow"></p>
+    <h2 id="event-dialog-title"></h2>
+    <p id="event-dialog-time" class="event-dialog-time"></p>
+    <div id="event-dialog-details" class="event-dialog-details" hidden></div>
+    <button id="event-edit-toggle" class="event-edit-toggle" type="button" hidden>edit</button>
+    <form id="event-editor" class="event-editor" hidden>
+      <div class="event-editor-grid">
+        <label class="event-title-field">name<input id="event-edit-title" type="text" maxlength="80" required></label>
+        <fieldset class="event-context-fields">
+          <legend>details</legend>
+          <label>who<input id="event-edit-who" type="text" maxlength="160"></label>
+          <label>what<input id="event-edit-what" type="text" maxlength="240"></label>
+          <label>where<input id="event-edit-where" type="text" maxlength="200"></label>
+          <label>why<input id="event-edit-why" type="text" maxlength="240"></label>
+        </fieldset>
+        <label>date<input id="event-edit-date" type="date" required></label>
+        <label>start<input id="event-edit-start" type="time" step="300" required></label>
+        <label>end<input id="event-edit-end" type="time" step="300" required></label>
+      </div>
+      <p id="event-editor-error" class="event-editor-error" hidden></p>
+      <div class="event-editor-actions">
+        <button id="event-delete" class="event-delete" type="button">delete</button>
+        <div class="event-editor-confirm">
+          <button id="event-edit-cancel" class="event-edit-cancel" type="button">cancel</button>
+          <button class="event-save" type="submit">save</button>
+        </div>
+      </div>
+    </form>
+    <p id="event-readonly-note" class="event-readonly-note" hidden></p>
+  </dialog>
+
+  <dialog id="developer-panel" class="developer-panel">
+    <div class="developer-heading">
+      <div><span>development</span><h2>viv’s working state</h2></div>
+      <button id="developer-close" type="button" aria-label="close developer tools">×</button>
+    </div>
+    <dl class="developer-summary">
+      <div><dt>last intent</dt><dd id="dev-intent">none yet</dd></div>
+      <div><dt>pending</dt><dd id="dev-pending">nothing pending</dd></div>
+      <div><dt>calendar source</dt><dd id="dev-calendar-source">checking</dd></div>
+    </dl>
+    <section><h3>known tasks</h3><pre id="dev-tasks">[]</pre></section>
+    <section><h3>schedule context</h3><pre id="dev-schedule">[]</pre></section>
+    <section><h3>recent state</h3><pre id="dev-state">{}</pre></section>
+    <button id="reset-conversation" class="reset-button" type="button">reset local conversation</button>
+    <p class="shortcut-note">shortcut: command/control + shift + d</p>
+  </dialog>
+
+  <script type="module" src="/app.js"></script>
 </body>
 </html>

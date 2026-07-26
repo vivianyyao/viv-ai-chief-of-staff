@@ -10,7 +10,7 @@ const redirectUri = "http://localhost:3333/oauth2callback";
 const oauth = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 const url = oauth.generateAuthUrl({
   access_type: "offline", prompt: "consent",
-  scope: ["https://www.googleapis.com/auth/calendar.freebusy"]
+  scope: ["https://www.googleapis.com/auth/calendar.readonly"]
 });
 console.log(`Open this URL in your browser:\n\n${url}\n`);
 

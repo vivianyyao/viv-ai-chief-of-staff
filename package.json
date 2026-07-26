@@ -7,6 +7,7 @@
     "demo": "npm run build --silent && node dist/src/demo-server.js",
     "sms:local": "npm run build --silent && LOCAL_TEST_MODE=true PORT=3001 node dist/src/server.js",
     "sms:save-phone": "node scripts/save-phone-number.mjs",
+    "web:save-access": "bash scripts/save-web-access.sh",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/src/server.js",
     "build": "tsc",
